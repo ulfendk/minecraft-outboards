@@ -1,0 +1,74 @@
+# Push a tag like v0.2.0 (matching package.json) to publish a GitHub Release
+# with the .mcaddon and .mcpack files attached.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Check tag matches package.json
+        run: |
+          version=$(node -p "require('./package.json').version")
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "${tag%%-*}" != "$version" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $version"; exit 1
+          fi
+      - run: npm run build
+      - run: npm run validate
+      - run: npm test
+      - name: Bedrock Dedicated Server smoke test
+        run: tools/bds-test.sh
+      - run: npm run package
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 25
+          cache: gradle
+      - name: Build the Java edition and run its game tests
+        working-directory: java
+        run: ./gradlew --no-daemon build runGameTest
+      - name: Unversioned copies (for the website's "latest" download links)
+        run: |
+          v=$(node -p "require('./package.json').version")
+          cp "dist/Outboards-$v.mcaddon" dist/Outboards.mcaddon
+          cp "dist/Outboards_BP-$v.mcpack" dist/Outboards_BP.mcpack
+          cp "dist/Outboards_RP-$v.mcpack" dist/Outboards_RP.mcpack
+          jar=$(ls java/build/libs/outboards-fabric-*.jar | grep -v sources | head -1)
+          cp "$jar" dist/
+          cp "$jar" dist/Outboards-fabric.jar
+      - run: npm run preview
+      - name: Release notes
+        run: node tools/release-notes.mjs "$GITHUB_REF_NAME" > release-notes.md
+      - uses: softprops/action-gh-release@v3
+        with:
+          body_path: release-notes.md
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: |
+            dist/*.mcaddon
+            dist/*.mcpack
+            dist/*.jar
+            build/preview/sheet.png
+
+  refresh-site:
+    # Pages may only deploy from main, so re-run the main build to refresh the website.
+    needs: release
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: write
+    steps:
+      - run: gh workflow run build.yml --ref main --repo "$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ github.token }}

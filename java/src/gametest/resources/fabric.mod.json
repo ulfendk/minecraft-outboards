@@ -1,0 +1,15 @@
+{
+	"schemaVersion": 1,
+	"id": "outboards-test",
+	"version": "1.0.0",
+	"name": "Outboards tests",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-gametest": [
+			"dk.ulfen.outboards.test.OutboardGameTests"
+		]
+	},
+	"depends": {
+		"outboards": "*"
+	}
+}
