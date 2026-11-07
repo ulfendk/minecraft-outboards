@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0] - 2026-11-07
+### Changed
+- The Inboard Engine is now a real ship's engine: a V-engine 2 blocks wide, 2 high and 6 long, built of 24 blocks ahead of you when you place it. Using any of its blocks fills it up or casts off; breaking any of them takes the whole engine away and gives it back.
+
+### Added
+- Propeller and Shaft: a stern tube, shaft, bronze four-bladed propeller and rudder. Fit it to the stern at or below the water line like an outboard. An inboard engine only pushes a ship that has one; without it, casting off says so.
+- Bedrock: the engine's blocks and propellers turn with the ship.
+
 ## [0.2.0] - 2026-11-07
 ### Added
 - Inboard Engine (20,000 hp), on Bedrock and Java: a ship's diesel the size of a block. Place it anywhere inside a hull, facing the way the ship should go. With one aboard, a raft may be a ship of up to 4,096 blocks (256 without). One engine drives a ship of 1,000 blocks at 36 km/h; fit several for the biggest ships.

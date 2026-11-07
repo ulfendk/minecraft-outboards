@@ -38,7 +38,13 @@ const UI = {
   [`${NS}.wrong_fuel.inboard`]: ['The inboard engine runs on coal blocks, lava buckets or blaze rods', 'Indenbordsmotoren kører på kulblokke, lavaspande eller blazestave'],
   [`${NS}.inboard_no_boat`]: ['The inboard engine is far too big for a boat: place it inside a ship\'s hull', 'Indenbordsmotoren er alt for stor til en båd: Sæt den inde i et skibs skrog'],
   [`${NS}.attached`]: ['Motor fitted! Fill it up, get in and press W.', 'Motoren er sat på! Fyld den op, stig om bord og tryk W.'],
-  [`${NS}.inboard_placed`]: ['Engine installed! Fill it up and right-click it, or the ship\'s wheel, to cast off.', 'Motoren er installeret! Fyld den op, og højreklik på den eller på skibsrattet for at kaste los.'],
+  [`${NS}.inboard_placed`]: [
+    'Engine installed! Fit a propeller and shaft below the stern, fill the engine up and right-click it, or the ship\'s wheel, to cast off.',
+    'Motoren er installeret! Sæt en skrue og skrueaksel under agterenden, fyld motoren op, og højreklik på den eller på skibsrattet for at kaste los.',
+  ],
+  [`${NS}.engine_no_room`]: ['No room for the engine: it needs 2 blocks across, 2 up and 6 ahead of you', 'Der er ikke plads til motoren: Den skal bruge 2 blokke på tværs, 2 op og 6 frem foran dig'],
+  [`${NS}.propeller_fitted`]: ['Propeller fitted! An inboard engine on the ship drives it.', 'Skruen er sat på! En indenbordsmotor på skibet driver den.'],
+  [`${NS}.raft.no_propeller`]: ['The inboard engine has nothing to push with: fit a propeller and shaft below the stern', 'Indenbordsmotoren har intet at skubbe med: Sæt en skrue og skrueaksel under agterenden'],
   [`${NS}.detached`]: ['Motor taken off', 'Motoren er taget af'],
   [`${NS}.chest_boat`]: ['Motors only fit boats and bamboo rafts without a chest', 'Motorer passer kun på både og bambusflåder uden kiste'],
   [`${NS}.mount_hint`]: ['Clamp the motor onto the side of a raft, at the water line', 'Sæt motoren på siden af en flåde, ved vandlinjen'],
@@ -73,8 +79,8 @@ const UI = {
   ],
   [`${NS}.handbook.ship`]: ['A ship', 'Et skib'],
   [`${NS}.handbook.ship_text`]: [
-    'With an inboard engine aboard, a raft can be a ship of up to 4,096 blocks. Place the engine anywhere inside the hull, facing the way the ship should go (it doesn\'t need to touch the water). Fill it up with coal blocks, lava or blaze rods, and right-click it, or a ship\'s wheel on the bridge, to cast off. One engine pushes a thousand blocks at full speed; fit two or more for the really big ships.',
-    'Med en indenbordsmotor om bord kan en flåde være et skib på op til 4.096 blokke. Sæt motoren et sted inde i skroget, vendt den vej, skibet skal sejle (den behøver ikke røre vandet). Fyld den op med kulblokke, lava eller blazestave, og højreklik på den, eller på et skibsrat på broen, for at kaste los. Én motor skubber tusind blokke i fuld fart; sæt to eller flere i de helt store skibe.',
+    'With an inboard engine aboard, a raft can be a ship of up to 4,096 blocks. The engine is 2 blocks wide, 2 high and 6 long: place it inside the hull, facing the way the ship should go, and it is built ahead of you. Then use a propeller and shaft on the stern at or below the water line. Fill the engine up with coal blocks, lava or blaze rods, and right-click it, or a ship\'s wheel on the bridge, to cast off. One engine pushes a thousand blocks at full speed; fit two or more for the really big ships.',
+    'Med en indenbordsmotor om bord kan en flåde være et skib på op til 4.096 blokke. Motoren er 2 blokke bred, 2 høj og 6 lang: Sæt den inde i skroget, vendt den vej, skibet skal sejle, så bliver den bygget foran dig. Brug så en skrue og skrueaksel på agterenden ved eller under vandlinjen. Fyld motoren op med kulblokke, lava eller blazestave, og højreklik på den, eller på et skibsrat på broen, for at kaste los. Én motor skubber tusind blokke i fuld fart; sæt to eller flere i de helt store skibe.',
   ],
   [`${NS}.handbook.fuel`]: ['Fuel', 'Brændstof'],
   [`${NS}.handbook.fuel_text`]: [

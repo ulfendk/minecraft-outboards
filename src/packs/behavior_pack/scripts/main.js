@@ -1,7 +1,7 @@
 import { system, world } from '@minecraft/server';
 import { forgetBoat, setupBoats } from './boat.js';
 import { setupManual } from './manual.js';
-import { registerMotorItem } from './place.js';
+import { registerMotorItem, setupPlacing } from './place.js';
 import { registerRaftBlocks, setupRafts } from './raft.js';
 import { selfTest } from './selftest.js';
 import { boatOf, LOG, NS } from './util.js';
@@ -15,6 +15,7 @@ world.afterEvents.worldLoad.subscribe(() => {
   setupBoats();
   setupRafts();
   setupManual();
+  setupPlacing();
   console.log(`${LOG} loaded`);
 });
 

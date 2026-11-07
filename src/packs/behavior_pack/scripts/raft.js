@@ -5,15 +5,17 @@
 // every time the raft has gone a block the whole thing is copied one block on with
 // structures (blocks, chests and all; one per 64x64 tile, the most a structure holds), and the
 // players and animals on the deck are moved with it. Holding A or D long enough turns it a
-// quarter turn.
+// quarter turn. An inboard engine is 24 blocks: only its first one (part 0,0,0, which keeps
+// the fuel) counts as a motor, and it only pushes when the ship has a propeller.
 import { BlockPermutation, StructureRotation, StructureSaveMode, system, world } from '@minecraft/server';
 import {
   MAX_RAFT, REVERSE, rotateQuarter, scanVessel, SHIP_STEP_LIMIT, STEP_LIMIT, step, vectorOf, vessel, waterLevel, WATERY, initial, yawOf,
 } from './water.js';
 import { isFuel, refuel } from './fuel.js';
 import {
-  blockAt, driverOf, isHelm, kmh, LOG, motorOfBlock, NS, percent, readInput, ridersOf, sound, tell,
+  blockAt, driverOf, ENGINE_ID, isHelm, kmh, LOG, motorOfBlock, NS, percent, PROPELLER_ID, readInput, ridersOf, sound, tell,
 } from './util.js';
+import { engineHead, partOf } from './place.js';
 
 const FACINGS = ['north', 'east', 'south', 'west'];
 const OPPOSITE = { north: 'south', south: 'north', east: 'west', west: 'east' };
@@ -69,26 +71,38 @@ export function startRaft(dim, at, player, { test } = {}) {
   const cells = found.cells.map(([x, y, z]) => ({ x, y, z }));
   const motors = [];
   const containers = [];
-  let helm;
+  // Blocks that face a way of their own (the engine's blocks, propellers): turned with the raft.
+  const faced = [];
+  let helm, propellers = 0;
   for (const c of cells) {
     const block = dim.getBlock(c);
     const motor = motorOfBlock(block.typeId);
-    if (motor) motors.push({ pos: c, motor, facing: block.permutation.getState(`${NS}:facing`) ?? 'north', fuel: motorFuel(block) });
+    const facing = block.permutation.getState(`${NS}:facing`) ?? 'north';
+    if (block.typeId === ENGINE_ID && partOf(block.permutation).some((v) => v)) faced.push({ pos: c, facing });
+    else if (motor) motors.push({ pos: c, motor, facing, fuel: motorFuel(block) });
     else if (isHelm(block.typeId)) helm = { pos: c, facing: block.permutation.getState('minecraft:cardinal_direction') ?? 'north' };
+    else if (block.typeId === PROPELLER_ID) {
+      propellers++;
+      faced.push({ pos: c, facing });
+    }
     try { if (block.getComponent('minecraft:inventory')) containers.push(c); } catch {}
   }
   if (!motors.length) return fail(player, 'no_motor');
+  if (!propellers && motors.every((m) => m.motor.inboard)) return fail(player, 'no_propeller');
+  // The motor you clicked (or the engine you clicked a block of) leads.
+  const lead = motors.findIndex((m) => key(m.pos) === key(at));
+  if (lead > 0) motors.unshift(...motors.splice(lead, 1));
   // The raft goes where its first motor pushes it: the opposite way to its propeller.
   const heading = OPPOSITE[motors[0].facing];
   const water = waterLevel(get, found.cells);
-  // The driver stands behind the wheel, or on the deck in front of the motor.
+  // The driver stands behind the wheel, on the deck in front of the motor, or up on the engine.
   const seatAt = helm
     ? add(helm.pos, vectorToPos(OPPOSITE[helm.facing]))
-    : add(motors[0].pos, { ...vectorToPos(heading), y: 1 });
+    : motors[0].motor.inboard ? add(motors[0].pos, { x: 0, y: 2, z: 0 }) : add(motors[0].pos, { ...vectorToPos(heading), y: 1 });
   const seat = dim.spawnEntity(`${NS}:raft_seat`, { x: seatAt.x + 0.5, y: seatAt.y, z: seatAt.z + 0.5 });
   seat.setRotation({ x: 0, y: yawOf(helm ? helm.facing : heading) });
   const raft = {
-    dim, cells, set: new Set(cells.map(key)), motors, containers, helm, heading, water, seat, test,
+    dim, cells, set: new Set(cells.map(key)), motors, containers, faced, propellers, helm, heading, water, seat, test,
     s: { ...initial(yawOf(heading)) }, progress: 0, turn: 0, blockedAt: -99,
   };
   rafts.set(seat.id, raft);
@@ -281,6 +295,13 @@ function shift(raft, move) {
       setState(dim, m.pos, `${NS}:facing`, m.facing);
     }
   }
+  for (const f of raft.faced) {
+    f.pos = map(f.pos);
+    if (q) {
+      f.facing = turnFacing(f.facing, q);
+      setState(dim, f.pos, `${NS}:facing`, f.facing);
+    }
+  }
   if (raft.helm) {
     raft.helm.pos = map(raft.helm.pos);
     if (q) {
@@ -342,7 +363,8 @@ function drive(raft, now) {
     raft.driver = driver;
   }
   const input = raft.test ?? readInput(driver);
-  const fuelled = raft.motors.filter((m) => m.fuel > 0);
+  // An inboard engine without a propeller just runs.
+  const fuelled = raft.motors.filter((m) => m.fuel > 0 && (raft.propellers || !m.motor.inboard));
   const v = vessel(fuelled.map((m) => m.motor), 4 + raft.cells.length);
   const yaw0 = yawOf(raft.heading);
   const s = step({ ...raft.s, yaw: yaw0 }, input, v, { afloat: true, fuel: fuelled.length > 0 });
@@ -430,8 +452,11 @@ function tick() {
 // ------------------------------------------------------------ motor and wheel blocks
 
 function interactMotor(e) {
-  const { player, block } = e;
+  const { player } = e;
+  let { block } = e;
   if (!player) return;
+  // Any block of an engine: its fuel is kept in its first block.
+  if (block.typeId === ENGINE_ID) block = block.dimension.getBlock(engineHead(block.location, block.permutation)) ?? block;
   const motor = motorOfBlock(block.typeId);
   const item = player.getComponent('minecraft:inventory')?.container?.getItem(player.selectedSlotIndex);
   if (item && isFuel(item.typeId)) {

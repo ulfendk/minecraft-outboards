@@ -70,7 +70,7 @@ const en = {
   features: [
     ['Fuel', 'A full tank is 12 units. Coal and charcoal give 3, a blaze rod 6; the electric motor takes redstone (1) or a block of redstone (9). Bigger motors burn faster.'],
     ['Big rafts, slow rafts', 'The heavier the raft, the slower it goes and turns. Several motors add up: put two or three on the stern of a big raft.'],
-    ['Ships', 'Put an inboard engine inside the hull and the limit goes from 256 blocks to 4,096: a cargo ship, a battleship, a floating town. One engine pushes a ship of a thousand blocks at full speed; fit two or more for the really big ones.'],
+    ['Ships', 'Put an inboard engine (2 blocks wide and 6 long) inside the hull and a propeller and shaft below the stern, and the limit goes from 256 blocks to 4,096: a cargo ship, a battleship, a floating town. One engine pushes a ship of a thousand blocks at full speed; fit two or more for the really big ones.'],
     ['Everything comes along', 'Chests keep what is in them, and players and animals standing on the deck travel with the raft.'],
     ['Bump', 'A raft stops when it hits the shore, a pier or another raft. Back off with S and steer round it.'],
     ['Silent running', 'The electric trolling motor makes no noise: the one to take fishing, or hunting along the shore.'],
@@ -145,7 +145,7 @@ const da = {
   features: [
     ['Brændstof', 'En fuld tank er 12 enheder. Kul og trækul giver 3, en blazestav 6; elmotoren tager redstone (1) eller en redstoneblok (9). Større motorer bruger mere.'],
     ['Store flåder er langsomme', 'Jo tungere flåden er, jo langsommere sejler og drejer den. Flere motorer lægges sammen: Sæt to eller tre på agterenden af en stor flåde.'],
-    ['Skibe', 'Sæt en indenbordsmotor inde i skroget, så går grænsen fra 256 blokke til 4.096: et fragtskib, et slagskib, en flydende by. Én motor skubber et skib på tusind blokke i fuld fart; sæt to eller flere i de helt store.'],
+    ['Skibe', 'Sæt en indenbordsmotor (2 blokke bred og 6 lang) inde i skroget og en skrue og skrueaksel under agterenden, så går grænsen fra 256 blokke til 4.096: et fragtskib, et slagskib, en flydende by. Én motor skubber et skib på tusind blokke i fuld fart; sæt to eller flere i de helt store.'],
     ['Alt kommer med', 'Kister beholder, hvad der er i dem, og spillere og dyr, der står på dækket, sejler med flåden.'],
     ['Bump', 'En flåde stopper, når den rammer kysten, en mole eller en anden flåde. Bak med S, og styr uden om.'],
     ['Lydløs', 'Elmotoren larmer ikke: den, du tager med på fisketur, eller på jagt langs kysten.'],
@@ -160,6 +160,8 @@ const da = {
     large_motor: 'Påhængsmotor (90 hk)',
     electric_motor: 'Elektrisk påhængsmotor',
     inboard_engine: 'Indenbordsmotor (20.000 hk)',
+    propeller: 'Skrue og skrueaksel',
+    propeller_mounted: 'Skrue og skrueaksel',
     helm: 'Skibsrat',
     outboard_handbook: 'Håndbog for påhængsmotorer',
     motorboat_oak: 'Motorbåd af eg',
@@ -178,7 +180,7 @@ const da = {
     medium_motor: 'En rigtig firetakter. Den får en båd til at plane hen over vandet, og den skubber en flåde på et par dusin blokke af sted i god fart.',
     large_motor: 'En stor V4 til speedbåde og store flåder. Meget hurtig på en båd, og den, du skal sætte på en flåde på hundrede blokke eller mere. Tørstig: Tag blazestave med.',
     electric_motor: 'En stille elmotor på et langt skaft, der lades op med redstone. Langsom, men lydløs: Fisk og dyr på kysten hører dig ikke komme.',
-    inboard_engine: 'En skibsdiesel på størrelse med en blok. Sæt den inde i skroget, vendt den vej, skibet skal sejle: Den skubber skibe på op til 4.096 blokke. Den brænder kulblokke, lava og blazestave, og en fuld tank holder tre minutter ved fuld gas. For stor til en båd.',
+    inboard_engine: 'En V-motor til skibe, 2 blokke bred, 2 høj og 6 lang. Sæt den inde i skroget, vendt den vej, skibet skal sejle, og sæt en skrue og skrueaksel under agterenden: Den skubber skibe på op til 4.096 blokke. Den brænder kulblokke, lava og blazestave, og en fuld tank holder tre minutter ved fuld gas. Alt for stor til en båd.',
   },
 };
 

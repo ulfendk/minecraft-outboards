@@ -26,6 +26,8 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'build');
 const BP = join(OUT, 'behavior_pack');
 const RP = join(OUT, 'resource_pack');
+/** Whole blocks (the inboard engine in one piece), for the previews and the site. */
+export const ART = join(OUT, 'art', 'blocks');
 
 const UUID = {
   bpHeader: '4ce3865e-c811-4740-a329-662b04594142',
@@ -125,15 +127,21 @@ export async function build({ quiet = false } = {}) {
   const terrain = {};
   const blockArtById = {};
   for (const block of BLOCKS) {
+    // The whole block, for pictures (build/art); the engine goes into the packs block by block.
     const { geo, texture } = blockArt(block);
-    blockArtById[block.id] = { geo, texture };
+    await write(join(ART, `${block.id}.geo.json`), geo.geometry);
+    await write(join(ART, `${block.id}.png`), texture);
+    const pieces = block.slices ? block.slices.map((sl) => ({ ...sl, ...blockArt({ ...block, id: sl.id, model: sl.model }) })) : [{ id: block.id, geo, texture }];
+    blockArtById[block.id] = { geo, texture, slices: block.slices ? pieces : undefined };
     await write(join(BP, 'blocks', `${block.id}.json`), bedrockBlock(block));
-    await write(join(RP, 'models', 'blocks', `${block.id}.geo.json`), geo.geometry);
-    await write(join(RP, 'textures', 'blocks', NS, `${block.id}.png`), texture);
+    for (const p of pieces) {
+      await write(join(RP, 'models', 'blocks', `${p.id}.geo.json`), p.geo.geometry);
+      await write(join(RP, 'textures', 'blocks', NS, `${p.id}.png`), p.texture);
+      terrain[`${NS}_${p.id}`] = { textures: `textures/blocks/${NS}/${p.id}` };
+    }
     await write(join(BP, 'loot_tables', 'blocks', `${block.id}.json`), {
-      pools: [{ rolls: 1, entries: [{ type: 'item', name: `${NS}:${block.loot}`, weight: 1 }] }],
+      pools: block.loot ? [{ rolls: 1, entries: [{ type: 'item', name: `${NS}:${block.loot}`, weight: 1 }] }] : [],
     });
-    terrain[`${NS}_${block.id}`] = { textures: `textures/blocks/${NS}/${block.id}` };
   }
   // Handbook portraits: each outboard on an oak boat, the inboard engine on its own.
   const anim = Object.values(boatAnimation(oak.m, 'preview').animations)[0];

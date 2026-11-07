@@ -50,6 +50,11 @@ public class MotorBlock extends Block {
 		return ModRegistry.motor(motorId);
 	}
 
+	/** Whether this block is a motor that drives the raft (every outboard; one block of an inboard engine). */
+	public boolean drives(BlockState state) {
+		return true;
+	}
+
 	@Override
 	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
 		builder.add(FACING, FUEL);

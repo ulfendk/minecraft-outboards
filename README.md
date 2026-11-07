@@ -12,13 +12,13 @@ Outboard motors for Minecraft – a **Bedrock add-on** and a **Java Edition mod 
 | Outboard Motor (15 hp) | 47 km/h | coal, charcoal, blaze rods |
 | Outboard Motor (90 hp) | 72 km/h | coal, charcoal, blaze rods |
 | Electric Trolling Motor | 22 km/h, silent | redstone |
-| Inboard Engine (20,000 hp) | ships up to 4,096 blocks (not on boats) | coal blocks, lava, blaze rods |
+| Inboard Engine (20,000 hp), 2×6×2 blocks, with a Propeller and Shaft | ships up to 4,096 blocks (not on boats) | coal blocks, lava, blaze rods |
 
 - **Motorboats:** use a motor on any wooden boat or a bamboo raft in the water. Right-click it with fuel to fill it up, get in and press W. Sneak + right-click with an empty hand to take the motor off.
 - **Rafts:** build anything on the water, up to 256 blocks, not touching the shore or the bottom. Use a motor on the side of a deck block to clamp it on at the water line, fill it up and right-click it (or a ship's wheel on the deck) to cast off. Sneak to stop and moor. Every motor on the raft pushes; chests keep what is in them; players and animals on deck come along.
   - **Java:** the raft's blocks become block displays that glide and turn smoothly, and are placed back as blocks (turned to the nearest quarter) when you stop.
   - **Bedrock:** the raft is moved a block at a time with structures, and turns in quarter turns while you hold A or D.
-- **Ships:** place an Inboard Engine inside the hull, facing the way you want to go. With one aboard, a raft may have up to 4,096 blocks. Fill it up and right-click it (or the ship's wheel) to cast off. One engine drives 1,000 blocks at full speed (36 km/h); fit more for bigger ships.
+- **Ships:** place an Inboard Engine inside the hull, facing the way you want to go. It is built 2 blocks wide, 2 high and 6 long ahead of you. Then fit a Propeller and Shaft on the stern at or below the water line. With an engine aboard, a raft may have up to 4,096 blocks. Fill the engine up and right-click it (or the ship's wheel) to cast off. One engine drives 1,000 blocks at full speed (36 km/h); fit more for bigger ships.
 
 ### Controls
 
@@ -53,7 +53,7 @@ cd java && ./gradlew build runGameTest   # Java mod + game tests (after npm run 
 | `src/lib/water.mjs` | the water model and the raft scanner, shared by the build, the Bedrock scripts and the tests; `java/.../Water.java` is a line-for-line port |
 | `src/lang.mjs`, `src/i18n.mjs` | in-game texts and website texts, English and Danish |
 | `src/packs/behavior_pack/scripts/` | Bedrock scripts: `boat.js`, `raft.js`, `place.js`, `fuel.js`, `manual.js`, `selftest.js` |
-| `java/` | the Fabric mod: `MotorboatEntity`, `RaftEntity`, `MotorBlock`, `InboardBlock`, `HelmBlock` |
+| `java/` | the Fabric mod: `MotorboatEntity`, `RaftEntity`, `MotorBlock`, `InboardBlock`, `PropellerBlock`, `HelmBlock` |
 | `tools/` | build, validate, package, preview, site, release notes, BDS test |
 
 ## Releases

@@ -45,7 +45,7 @@ export const MOTORS = [
   {
     id: 'inboard_engine', name: 'Inboard Engine (20,000 hp)', hp: 20000, kind: 'inboard', inboard: true,
     thrust: 300, maxSpeed: 0.5, burn: 1 / 300, tank: 12, fuels: HEAVY,
-    info: 'A ship’s diesel the size of a block. Place it inside the hull, facing the way the ship should go: it pushes ships of up to 4,096 blocks. It burns coal blocks, lava and blaze rods, and a full tank lasts three minutes at full throttle. Too big for a boat.',
+    info: 'A ship’s V-engine, 2 blocks wide, 2 high and 6 long. Place it inside the hull, facing the way the ship should go, and fit a propeller and shaft below the stern: it pushes ships of up to 4,096 blocks. It burns coal blocks, lava and blaze rods, and a full tank lasts three minutes at full throttle. Far too big for a boat.',
     recipe: { pattern: ['NPN', 'BRB', 'NCN'], key: { N: 'iron_block', P: 'piston', B: 'blast_furnace', R: 'redstone_block', C: 'copper_block' } },
     look: { cowl: '#7a1f1a', stripe: '#c9d0d4' },
   },

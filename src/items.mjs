@@ -1,4 +1,5 @@
-// Items: the four motors, the ship's wheel (a block) and the Outboard Handbook.
+// Items: the motors, the propeller and shaft for ships, the ship's wheel (a block) and the
+// Outboard Handbook.
 import { NS } from './lib/constants.mjs';
 import { pixelIcon } from './lib/texture.mjs';
 import { bedrockId } from './ids.mjs';
@@ -24,11 +25,35 @@ const HANDBOOK_ICON = pixelIcon([
   '................',
 ], { k: '#222222', b: '#0b5e7a', w: '#f4ecd8' });
 
-/** Items as { id, name, icon, stack, motor?, block?, recipe? }. */
+const PROPELLER_ICON = pixelIcon([
+  '................',
+  '.......pp.......',
+  '.......pp.......',
+  '.......pp.......',
+  '.......pp.......',
+  '.......pp.......',
+  '.pppppphhpppppp.',
+  '.pppppphhpppppp.',
+  '.......pp.sssss.',
+  '.......pp.......',
+  '.......pp.......',
+  '.......pp.......',
+  '.......pp.......',
+  '................',
+  '................',
+  '................',
+], { p: '#c9a44a', h: '#b9c0c6', s: '#7d848a' });
+
+/** Items as { id, name, icon, stack, motor?, place?, block?, recipe? }. */
 export function items() {
   const out = MOTORS.map((m) => ({
     id: m.id, name: m.name, icon: pixelIcon(m.icon.rows, m.icon.palette), stack: 1, motor: m.id, recipe: m.recipe,
   }));
+  // The propeller is clamped on by the script, like the motors (scripts/place.js).
+  out.push({
+    id: 'propeller', name: 'Propeller and Shaft', icon: PROPELLER_ICON, stack: 16, place: 'propeller_mounted',
+    recipe: { pattern: [' C ', 'CIC', ' C '], key: { C: 'copper_ingot', I: 'iron_block' } },
+  });
   for (const b of BLOCKS.filter((b) => b.helm)) {
     out.push({ id: b.id, name: b.name, icon: pixelIcon(b.icon.rows, b.icon.palette), stack: 16, block: true, recipe: b.recipe });
   }
@@ -43,11 +68,11 @@ export function buildItem(item) {
     'minecraft:max_stack_size': item.stack ?? 64,
   };
   // Motors are clamped onto a boat or a raft by the script (scripts/place.js).
-  if (item.motor) components[`${NS}:motor_item`] = {};
+  if (item.motor || item.place) components[`${NS}:motor_item`] = {};
   return {
     format_version: '1.21.90',
     'minecraft:item': {
-      description: { identifier: `${NS}:${item.id}`, menu_category: { category: item.motor ? 'items' : 'equipment' } },
+      description: { identifier: `${NS}:${item.id}`, menu_category: { category: item.motor || item.place ? 'items' : 'equipment' } },
       components,
     },
   };

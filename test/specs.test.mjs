@@ -45,7 +45,7 @@ test('the site texts exist in both languages', () => {
 test('every motor and the wheel can be crafted, and recipes only use real ingredients', () => {
   const list = items();
   const rs = recipes(list);
-  for (const id of [...MOTORS.map((m) => m.id), 'helm', 'outboard_handbook']) {
+  for (const id of [...MOTORS.map((m) => m.id), 'propeller', 'helm', 'outboard_handbook']) {
     assert.ok(rs.some((r) => Object.values(r)[0].result.item === `outboards:${id}`), id);
   }
   for (const r of rs) {
@@ -59,5 +59,16 @@ test('boats keep their four outboards in the same order, and the inboard engine 
   const engine = BLOCKS.find((b) => b.motor === 'inboard_engine');
   assert.ok(engine?.inboard);
   assert.deepEqual(engine.box, { origin: [-8, 0, -8], size: [16, 16, 16] });
+  // One model per block of it, every one with something in it, all inside the block.
+  assert.equal(engine.slices.length, 24);
+  for (const sl of engine.slices) {
+    const cubes = sl.model.bones.flatMap((b) => b.cubes ?? []);
+    assert.ok(cubes.length, sl.id);
+    for (const c of cubes) {
+      assert.ok(c.origin[0] >= -8 && c.origin[2] >= -8 && c.origin[1] >= 0, `${sl.id} ${c.origin}`);
+      assert.ok(c.origin[0] + c.size[0] <= 8 && c.origin[2] + c.size[2] <= 8 && c.origin[1] + c.size[1] <= 16, `${sl.id} ${c.origin} ${c.size}`);
+    }
+  }
+  assert.ok(BLOCKS.some((b) => b.propeller));
   for (const id of ['coal_block', 'lava_bucket', 'blaze_rod']) assert.ok(MOTORS.find((m) => m.inboard).fuels[id], id);
 });

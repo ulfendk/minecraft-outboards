@@ -1,6 +1,6 @@
 {
   "name": "outboards",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Outboards: a Minecraft Bedrock add-on and Java mod with outboard motors for boats and for rafts you build out of blocks",
   "private": true,
   "type": "module",

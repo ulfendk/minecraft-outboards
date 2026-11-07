@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { PNG } from 'pngjs';
 import { build } from './build.mjs';
 import { render } from './render.mjs';
-import { MOTOR_VARS } from './build.mjs';
+import { ART, MOTOR_VARS } from './build.mjs';
 import { boatAnimation } from '../src/lib/anim.mjs';
 import { NS } from '../src/lib/constants.mjs';
 import { BOAT_MASS, topSpeed, vessel } from '../src/lib/water.mjs';
@@ -38,8 +38,8 @@ await mkdir(join(OUT, 'img', 'items'), { recursive: true });
 await mkdir(join(OUT, 'img', 'boats'), { recursive: true });
 const oak = boats.find((b) => b.wood === 'oak');
 const load = async (dir, id) => ({
-  geo: JSON.parse(await readFile(join(RP, dir === 'blocks' ? 'models/blocks' : 'models/entity', `${id}.geo.json`), 'utf8')),
-  tex: await readFile(join(RP, dir === 'blocks' ? `textures/blocks/${NS}` : `textures/entity/${NS}`, `${id}.png`)),
+  geo: JSON.parse(await readFile(dir === 'blocks' ? join(ART, `${id}.geo.json`) : join(RP, 'models/entity', `${id}.geo.json`), 'utf8')),
+  tex: await readFile(dir === 'blocks' ? join(ART, `${id}.png`) : join(RP, `textures/entity/${NS}`, `${id}.png`)),
 });
 {
   const { geo, tex } = await load('entity', oak.id);

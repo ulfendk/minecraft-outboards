@@ -168,6 +168,35 @@ export function rotateQuarter([x, y, z], quarters) {
   return [z, y, -x];
 }
 
+// ------------------------------------------------------------ the inboard engine
+
+/** The inboard engine is built of blocks: 2 wide, 2 high and 6 long. */
+export const ENGINE = [2, 2, 6];
+/** Quarter turns from north (the way the models' propellers point). */
+export const QUARTER = { north: 0, east: 1, south: 2, west: 3 };
+
+/**
+ * The blocks of an inboard engine whose part 0,0,0 (aft, bottom, one side) is at `at`, its
+ * propeller end pointing `facing`: [{ pos: [x, y, z], part: [px, py, pz] }]. pz counts from
+ * the aft end forwards.
+ */
+export function engineCells([x, y, z], facing) {
+  const out = [];
+  for (let px = 0; px < ENGINE[0]; px++)
+    for (let py = 0; py < ENGINE[1]; py++)
+      for (let pz = 0; pz < ENGINE[2]; pz++) {
+        const [dx, dy, dz] = rotateQuarter([px, py, pz], QUARTER[facing]);
+        out.push({ pos: [x + dx, y + dy, z + dz], part: [px, py, pz] });
+      }
+  return out;
+}
+
+/** Where part 0,0,0 of the engine is, from one of its blocks. */
+export function engineOrigin([x, y, z], part, facing) {
+  const [dx, dy, dz] = rotateQuarter(part, QUARTER[facing]);
+  return [x - dx, y - dy, z - dz];
+}
+
 /** Compass direction of a yaw, and back. */
 export const DIRS = ['south', 'west', 'north', 'east'];
 export const yawOf = (dir) => DIRS.indexOf(dir) * 90;

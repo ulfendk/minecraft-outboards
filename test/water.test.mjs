@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  BOAT_MASS, initial, MAX_RAFT, MAX_SHIP, rotateQuarter, scanRaft, scanVessel, step, topSpeed, vessel, waterLevel, dirOf, yawOf,
+  BOAT_MASS, ENGINE, engineCells, engineOrigin, initial, MAX_RAFT, MAX_SHIP, rotateQuarter, scanRaft, scanVessel, step, topSpeed, vessel, waterLevel, dirOf, yawOf,
 } from '../src/lib/water.mjs';
 import { MOTORS, motorById } from '../src/motors.mjs';
 
@@ -142,6 +142,21 @@ test('one inboard engine drives a ship of a thousand blocks at full speed, two a
   assert.ok(kmh(one) >= 10, `${kmh(one)} km/h`);
   assert.ok(kmh(two) > 20, `${kmh(two)} km/h`);
   assert.ok(Math.abs((inboard.tank / inboard.burn) / 1200 - 3) < 0.5);
+});
+
+test('the inboard engine is 2 wide, 2 high and 6 long, reaching ahead of its propeller end', () => {
+  assert.deepEqual(ENGINE, [2, 2, 6]);
+  for (const [facing, ahead] of [['north', [0, 0, 1]], ['east', [-1, 0, 0]], ['south', [0, 0, -1]], ['west', [1, 0, 0]]]) {
+    const cells = engineCells([10, 5, -3], facing);
+    assert.equal(new Set(cells.map((c) => c.pos.join())).size, 24);
+    const xs = cells.map((c) => c.pos[0]), zs = cells.map((c) => c.pos[2]), ys = cells.map((c) => c.pos[1]);
+    const span = (v) => Math.max(...v) - Math.min(...v) + 1;
+    assert.deepEqual([span(xs) * span(zs), span(ys)], [12, 2], facing);
+    // The last part is 5 blocks ahead of the first (the way the ship goes).
+    const last = cells.find((c) => c.part.join() === '0,0,5').pos;
+    assert.deepEqual([last[0] - 10, last[1] - 5, last[2] + 3].map((n) => n + 0), ahead.map((n) => n * 5), facing);
+    for (const c of cells) assert.deepEqual(engineOrigin(c.pos, c.part, facing).map((n) => n + 0), [10, 5, -3]);
+  }
 });
 
 test('a raft on dry land is not afloat', () => {

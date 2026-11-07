@@ -11,6 +11,7 @@ import dk.ulfen.outboards.raft.HelmBlock;
 import dk.ulfen.outboards.raft.InboardBlock;
 import dk.ulfen.outboards.raft.MotorBlock;
 import dk.ulfen.outboards.raft.MotorItem;
+import dk.ulfen.outboards.raft.PropellerBlock;
 import dk.ulfen.outboards.raft.RaftEntity;
 import net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTab;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
@@ -46,6 +47,8 @@ public final class ModRegistry {
 
 	public static EntityType<RaftEntity> RAFT;
 	public static HelmBlock HELM;
+	public static PropellerBlock PROPELLER;
+	public static Item PROPELLER_ITEM;
 	public static Item HELM_ITEM;
 	public static Item HANDBOOK;
 
@@ -115,6 +118,10 @@ public final class ModRegistry {
 			MOTOR_BLOCKS.put(m.id, block);
 			MOTOR_ITEMS.put(m.id, item(m.id, p -> new MotorItem(block, p, m.id), new Item.Properties().stacksTo(1)));
 		}
+		ResourceKey<Block> propKey = ResourceKey.create(Registries.BLOCK, id("propeller_mounted"));
+		PROPELLER = Registry.register(BuiltInRegistries.BLOCK, propKey, new PropellerBlock(BlockBehaviour.Properties.of()
+			.setId(propKey).mapColor(MapColor.METAL).strength(0.6F).sound(SoundType.METAL).noOcclusion()));
+		PROPELLER_ITEM = item("propeller", p -> new BlockItem(PROPELLER, p), new Item.Properties().stacksTo(16));
 		ResourceKey<Block> helmKey = ResourceKey.create(Registries.BLOCK, id("helm"));
 		HELM = Registry.register(BuiltInRegistries.BLOCK, helmKey, new HelmBlock(BlockBehaviour.Properties.of()
 			.setId(helmKey).mapColor(MapColor.WOOD).strength(1.0F).sound(SoundType.WOOD).noOcclusion()));
@@ -126,6 +133,7 @@ public final class ModRegistry {
 			.icon(() -> new ItemStack(MOTOR_ITEMS.get("medium_motor")))
 			.displayItems((params, out) -> {
 				MOTOR_ITEMS.values().forEach(out::accept);
+				out.accept(PROPELLER_ITEM);
 				out.accept(HELM_ITEM);
 				out.accept(HANDBOOK);
 			})

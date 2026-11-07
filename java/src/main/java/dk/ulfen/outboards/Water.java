@@ -180,6 +180,27 @@ public final class Water {
 		return level == Integer.MIN_VALUE ? min - 1 : level;
 	}
 
+	// ------------------------------------------------------------ the inboard engine
+
+	/** The inboard engine is built of blocks: 2 wide, 2 high and 6 long. */
+	public static final int[] ENGINE = {2, 2, 6};
+
+	/** Quarter turns from north for a horizontal facing ("north", "east", ...). */
+	public static int quarter(String facing) {
+		return switch (facing) {
+			case "east" -> 1;
+			case "south" -> 2;
+			case "west" -> 3;
+			default -> 0;
+		};
+	}
+
+	/** Offset of an engine part from part 0,0,0, with the propeller end pointing `facing` (see engineCells in water.mjs). */
+	public static int[] engineOffset(int px, int py, int pz, String facing) {
+		int[] r = rotateQuarter(px, pz, quarter(facing));
+		return new int[] {r[0], py, r[1]};
+	}
+
 	/** Turns a horizontal offset by quarter turns clockwise (east -> south). */
 	public static int[] rotateQuarter(int x, int z, int quarters) {
 		int q = ((quarters % 4) + 4) % 4;

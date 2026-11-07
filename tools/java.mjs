@@ -84,18 +84,34 @@ export async function buildJava({ geos, anims, textures, boats, blocks, blockArt
   await write(join(OUT, NS, 'scan_fixture.json'), scanFixtures());
 
   for (const block of blocks) {
-    const { geo, texture } = blockArt[block.id];
-    await write(join(A, 'textures', 'block', `${block.id}.png`), texture);
-    await write(join(A, 'models', 'block', `${block.id}.json`), javaBlockModel(block, geo));
-    await write(join(A, 'blockstates', `${block.id}.json`), {
-      variants: Object.fromEntries(FACINGS.map((f) => [`facing=${f}`, { model: `${NS}:block/${block.id}`, ...(Y_ROT[f] ? { y: Y_ROT[f] } : {}) }])),
-    });
+    const { geo, texture, slices } = blockArt[block.id];
+    if (slices) {
+      // The inboard engine: a model per block of it, picked by its part (px, py, pz).
+      for (const sl of slices) {
+        await write(join(A, 'textures', 'block', `${sl.id}.png`), sl.texture);
+        await write(join(A, 'models', 'block', `${sl.id}.json`), javaBlockModel({ id: sl.id }, sl.geo));
+      }
+      await write(join(A, 'textures', 'block', `${block.id}.png`), slices[0].texture);
+      await write(join(A, 'models', 'block', `${block.id}.json`), javaBlockModel({ id: slices[0].id }, slices[0].geo));
+      await write(join(A, 'blockstates', `${block.id}.json`), {
+        variants: Object.fromEntries(FACINGS.flatMap((f) => slices.map((sl) => [
+          `facing=${f},px=${sl.part[0]},py=${sl.part[1]},pz=${sl.part[2]}`,
+          { model: `${NS}:block/${sl.id}`, ...(Y_ROT[f] ? { y: Y_ROT[f] } : {}) },
+        ]))),
+      });
+    } else {
+      await write(join(A, 'textures', 'block', `${block.id}.png`), texture);
+      await write(join(A, 'models', 'block', `${block.id}.json`), javaBlockModel(block, geo));
+      await write(join(A, 'blockstates', `${block.id}.json`), {
+        variants: Object.fromEntries(FACINGS.map((f) => [`facing=${f}`, { model: `${NS}:block/${block.id}`, ...(Y_ROT[f] ? { y: Y_ROT[f] } : {}) }])),
+      });
+    }
     await write(join(D, 'loot_table', 'blocks', `${block.id}.json`), {
       type: 'minecraft:block',
-      pools: [{ rolls: 1, entries: [{ type: 'minecraft:item', name: `${NS}:${block.loot}` }], conditions: [{ condition: 'minecraft:survives_explosion' }] }],
+      pools: block.loot ? [{ rolls: 1, entries: [{ type: 'minecraft:item', name: `${NS}:${block.loot}` }], conditions: [{ condition: 'minecraft:survives_explosion' }] }] : [],
     });
   }
-  await write(join(OUT, 'data', 'minecraft', 'tags', 'block', 'mineable', 'pickaxe.json'), { replace: false, values: blocks.filter((b) => b.motor).map((b) => `${NS}:${b.id}`) });
+  await write(join(OUT, 'data', 'minecraft', 'tags', 'block', 'mineable', 'pickaxe.json'), { replace: false, values: blocks.filter((b) => b.motor || b.propeller).map((b) => `${NS}:${b.id}`) });
   await write(join(OUT, 'data', 'minecraft', 'tags', 'block', 'mineable', 'axe.json'), { replace: false, values: blocks.filter((b) => b.helm).map((b) => `${NS}:${b.id}`) });
 
   for (const item of items) {

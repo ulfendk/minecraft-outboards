@@ -6,6 +6,9 @@ export const LOG = '[Outboards]';
 export const MOTOR_BY_ID = Object.fromEntries(MOTORS.map((m) => [m.id, m]));
 /** The motors that fit a boat, numbered 1..4 on the motorboat. */
 export const OUTBOARDS = MOTORS.filter((m) => !m.inboard);
+/** The block every part of the inboard engine is. */
+export const ENGINE_ID = `${NS}:${MOTORS.find((m) => m.inboard).id}_mounted`;
+export const PROPELLER_ID = `${NS}:propeller_mounted`;
 export const BOAT_BY_TYPE = Object.fromEntries(BOATS.map((b) => [`${NS}:${b.id}`, b]));
 export const boatOf = (entity) => BOAT_BY_TYPE[entity?.typeId];
 /** The motor a mounted-motor block holds ('outboards:small_motor_mounted' -> small motor). */

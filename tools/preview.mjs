@@ -2,7 +2,7 @@
 // into build/preview/, plus a contact sheet: build/preview/sheet.png.
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { build, MOTOR_VARS } from './build.mjs';
+import { ART, build, MOTOR_VARS } from './build.mjs';
 import { boatAnimation } from '../src/lib/anim.mjs';
 import { NS } from '../src/lib/constants.mjs';
 import { MOTORS, OUTBOARDS } from '../src/motors.mjs';
@@ -14,8 +14,8 @@ const OUT = 'build/preview';
 const { boats, blocks } = await build({ quiet: true });
 await mkdir(OUT, { recursive: true });
 const load = async (kind, id) => ({
-  geo: JSON.parse(await readFile(join(RP, kind === 'block' ? 'models/blocks' : 'models/entity', `${id}.geo.json`), 'utf8')),
-  tex: await readFile(join(RP, kind === 'block' ? `textures/blocks/${NS}` : `textures/entity/${NS}`, `${id}.png`)),
+  geo: JSON.parse(await readFile(kind === 'block' ? join(ART, `${id}.geo.json`) : join(RP, 'models/entity', `${id}.geo.json`), 'utf8')),
+  tex: await readFile(kind === 'block' ? join(ART, `${id}.png`) : join(RP, `textures/entity/${NS}`, `${id}.png`)),
 });
 
 const thumbs = [];

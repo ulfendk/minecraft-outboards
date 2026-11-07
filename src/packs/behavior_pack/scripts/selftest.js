@@ -1,9 +1,9 @@
 import { ItemStack, system, world } from '@minecraft/server';
 import { ITEMS } from './data.js';
 import { fuelOf, setFuel, testDrive } from './boat.js';
-import { mountMotor } from './place.js';
+import { mountMotor, mountPropeller, partOf, placeEngine } from './place.js';
 import { moor, startRaft } from './raft.js';
-import { LOG, NS } from './util.js';
+import { ENGINE_ID, LOG, NS, PROPELLER_ID } from './util.js';
 
 const at = (ticks, fn) => new Promise((resolve) => system.runTimeout(() => { try { fn(); } catch (e) { console.warn(`${LOG} selftest ${e}`); } resolve(); }, ticks));
 
@@ -106,7 +106,8 @@ export async function selfTest(message) {
 
   // 3. A ship: a 70x4 barge of planks (280 blocks, more than a raft may have, and wider than
   //    one structure tile) with a chest. With only an outboard it is too big; with an inboard
-  //    engine on the deck, facing east, it sails east and comes through in one piece.
+  //    engine (24 blocks) on the deck, facing east, it still needs a propeller; with one it
+  //    sails east and comes through in one piece.
   const S = { x: -35, y: -61, z: -24 };
   const L = 70;
   dim.runCommand(`fill ${S.x} ${S.y} ${S.z} ${S.x + L - 1} ${S.y} ${S.z + 3} oak_planks`);
@@ -125,13 +126,25 @@ export async function selfTest(message) {
       moor(r);
     } else if (r.failed !== 'too_big') problems.push(`the big raft failed for ${r.failed}, not too_big`);
     dim.runCommand(`setblock ${outboardAt.x} ${outboardAt.y} ${outboardAt.z} water`);
+    // The engine's first block at its aft end; it reaches 6 blocks east and 2 up.
     const engineAt = { x: S.x + 1, y: S.y + 1, z: S.z + 2 };
-    mountMotor(dim, engineAt, 'inboard_engine', 'west');
+    if (!placeEngine(dim, engineAt, 'west')) problems.push('no room for the engine');
     const eb = dim.getBlock(engineAt);
     eb.setPermutation(eb.permutation.withState(`${NS}:fuel`, 12));
-    ship = startRaft(dim, engineAt, null, { test: { fwd: 1, side: 0 } });
+    const far = dim.getBlock({ x: S.x + 6, y: S.y + 2, z: S.z + 1 });
+    if (far?.typeId !== ENGINE_ID || partOf(far.permutation).join() !== '1,1,5') problems.push(`the engine's far corner is ${far?.typeId} ${far && partOf(far.permutation)}`);
+    // Started from another block of the engine: no propeller yet.
+    const other = { x: S.x + 4, y: S.y + 2, z: S.z + 1 };
+    const none = startRaft(dim, other, null, { test: { fwd: 1, side: 0 } });
+    if (!none?.failed) {
+      problems.push('a ship without a propeller cast off');
+      moor(none);
+    } else if (none.failed !== 'no_propeller') problems.push(`the ship without a propeller failed for ${none.failed}`);
+    mountPropeller(dim, outboardAt, 'west');
+    ship = startRaft(dim, other, null, { test: { fwd: 1, side: 0 } });
     if (!ship || ship.failed) problems.push(`the ship did not start (${ship?.failed})`);
-    else if (ship.cells.length !== L * 4 + 2) problems.push(`the ship has ${ship.cells.length} blocks, expected ${L * 4 + 2}`);
+    else if (ship.cells.length !== L * 4 + 26) problems.push(`the ship has ${ship.cells.length} blocks, expected ${L * 4 + 26}`);
+    else if (ship.motors.length !== 1) problems.push(`the engine counts as ${ship.motors.length} motors`);
     else if (ship.heading !== 'east') problems.push(`the ship heads ${ship.heading}, not east`);
   });
   await at(80, () => {
@@ -146,6 +159,13 @@ export async function selfTest(message) {
       if (dim.getBlock({ x, y: S.y, z }).typeId === 'minecraft:oak_planks') planks++;
     }
     if (planks !== L * 4) problems.push(`after sailing, ${planks} planks where there were ${L * 4}`);
+    let engine = 0, props = 0;
+    for (let x = S.x - 2; x < S.x + L + 20; x++) for (let z = S.z - 1; z <= S.z + 4; z++) for (let y = S.y; y <= S.y + 2; y++) {
+      const id = dim.getBlock({ x, y, z }).typeId;
+      if (id === ENGINE_ID) engine++;
+      if (id === PROPELLER_ID) props++;
+    }
+    if (engine !== 24 || props !== 1) problems.push(`after sailing, ${engine} engine blocks and ${props} propellers`);
     if (dim.getBlock({ x: S.x, y: S.y, z: S.z }).typeId === 'minecraft:oak_planks' && dx >= 1) problems.push('the ship left its stern behind');
     if (chest) {
       const items = dim.getBlock(chest).getComponent('minecraft:inventory').container;

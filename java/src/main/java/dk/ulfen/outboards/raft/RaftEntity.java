@@ -90,8 +90,9 @@ public class RaftEntity extends Entity {
 			this.oz = oz;
 		}
 
+		/** A motor that drives the raft (an engine counts once: its block 0,0,0). */
 		public boolean motor() {
-			return state.getBlock() instanceof MotorBlock;
+			return state.getBlock() instanceof MotorBlock m && m.drives(state);
 		}
 	}
 
@@ -103,6 +104,8 @@ public class RaftEntity extends Entity {
 	/** The heading when it cast off (yaw 0 of this entity is that heading). */
 	private float heading0;
 	private Water.State state = Water.State.initial(0);
+	/** Inboard engines push only when the ship has a propeller. */
+	private boolean propeller;
 	private boolean restored, moored;
 	private int blockedAt = -99, hudAfter;
 	/** The selftest drives a raft without anyone on it. */
@@ -148,25 +151,38 @@ public class RaftEntity extends Entity {
 	/** Scans the raft the block at pos belongs to and casts off with the player at the helm. */
 	public static @Nullable RaftEntity start(ServerLevel level, BlockPos at, @Nullable Player player) {
 		lastFailure = null;
+		// Any block of an engine: start from its first block.
+		if (level.getBlockState(at).getBlock() instanceof InboardBlock ib) at = ib.head(level.getBlockState(at), at);
 		Water.Getter get = (x, y, z) -> idAt(level, new BlockPos(x, y, z));
 		Water.Scan scan = Water.scanVessel(get, new Water.Cell(at.getX(), at.getY(), at.getZ()), RaftEntity::inboardId);
 		if (!scan.ok()) return fail(player, scan.reason());
 		BlockPos firstMotor = null, helm = null;
+		boolean propeller = false, outboard = false, leadInboard = false;
 		int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE, minY = Integer.MAX_VALUE;
 		for (Water.Cell c : scan.cells()) {
 			BlockPos p = new BlockPos(c.x(), c.y(), c.z());
-			Block b = level.getBlockState(p).getBlock();
-			if (b instanceof MotorBlock && (firstMotor == null || p.equals(at))) firstMotor = p;
+			BlockState bs = level.getBlockState(p);
+			Block b = bs.getBlock();
+			if (b instanceof MotorBlock m && m.drives(bs)) {
+				if (firstMotor == null || p.equals(at)) {
+					firstMotor = p;
+					leadInboard = m.motor().inboard;
+				}
+				outboard |= !m.motor().inboard;
+			}
 			if (b instanceof HelmBlock) helm = p;
+			if (b instanceof PropellerBlock) propeller = true;
 			minX = Math.min(minX, c.x()); maxX = Math.max(maxX, c.x());
 			minZ = Math.min(minZ, c.z()); maxZ = Math.max(maxZ, c.z());
 			minY = Math.min(minY, c.y());
 		}
 		if (firstMotor == null) return fail(player, "no_motor");
+		if (!propeller && !outboard) return fail(player, "no_propeller");
 		int px = Math.floorDiv(minX + maxX, 2), pz = Math.floorDiv(minZ + maxZ, 2);
 		// The raft goes where its motor pushes it: the opposite way to the propeller.
 		Direction heading = opposite(level.getBlockState(firstMotor).getValue(MotorBlock.FACING));
 		RaftEntity raft = new RaftEntity(ModRegistry.RAFT, level);
+		raft.propeller = propeller;
 		raft.water = Water.waterLevel(get, scan.cells());
 		raft.heading0 = heading.toYRot();
 		raft.state = Water.State.initial(raft.heading0);
@@ -202,8 +218,10 @@ public class RaftEntity extends Entity {
 
 		// Everyone on the deck comes along; the driver stands behind the wheel, or in front of the motor.
 		if (player != null) {
+			// Behind the wheel, on the deck in front of the motor, or up on the engine.
 			BlockPos seat = helm != null
 				? helm.relative(level.getBlockState(helm).getValue(HelmBlock.FACING).getOpposite())
+				: leadInboard ? firstMotor.above(2)
 				: firstMotor.relative(heading).above();
 			raft.seats.put(player.getUUID(), new Vec3(seat.getX() - px, seat.getY() - minY, seat.getZ() - pz));
 			player.startRiding(raft, true, true);
@@ -307,7 +325,12 @@ public class RaftEntity extends Entity {
 			in = new Water.Input((ci.forward() ? 1 : 0) - (ci.backward() ? 1 : 0), (ci.left() ? 1 : 0) - (ci.right() ? 1 : 0));
 		}
 		List<MotorSpec> running = new ArrayList<>();
-		for (Part p : parts) if (p.motor() && p.fuel > 0) running.add(((MotorBlock) p.state.getBlock()).motor());
+		for (Part p : parts) {
+			if (!p.motor() || p.fuel <= 0) continue;
+			MotorSpec m = ((MotorBlock) p.state.getBlock()).motor();
+			// An inboard engine without a propeller just runs.
+			if (!m.inboard || propeller) running.add(m);
+		}
 		Water.Vessel v = Water.vessel(running, 4 + parts.size());
 		Water.State s0 = state;
 		s0.yaw = heading();
