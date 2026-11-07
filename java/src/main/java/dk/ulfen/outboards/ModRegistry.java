@@ -8,6 +8,7 @@ import java.util.function.Function;
 
 import dk.ulfen.outboards.boat.MotorboatEntity;
 import dk.ulfen.outboards.raft.HelmBlock;
+import dk.ulfen.outboards.raft.InboardBlock;
 import dk.ulfen.outboards.raft.MotorBlock;
 import dk.ulfen.outboards.raft.MotorItem;
 import dk.ulfen.outboards.raft.RaftEntity;
@@ -33,6 +34,8 @@ import net.minecraft.world.level.material.MapColor;
 /** Everything the mod adds to the game registries. */
 public final class ModRegistry {
 	public static List<MotorSpec> MOTORS = List.of();
+	/** The motors that fit a boat (all but the inboard engine). */
+	public static List<MotorSpec> OUTBOARDS = List.of();
 	public static List<BoatSpec> BOATS = List.of();
 	public static final Map<String, EntityType<MotorboatEntity>> BOAT_TYPES = new LinkedHashMap<>();
 	private static final Map<EntityType<?>, BoatSpec> BOAT_BY_TYPE = new HashMap<>();
@@ -57,13 +60,13 @@ public final class ModRegistry {
 		throw new IllegalArgumentException("no motor " + id);
 	}
 
-	/** Motors are numbered 1..4 on the motorboat (0: none), the same as on Bedrock. */
+	/** Outboards are numbered 1..4 on the motorboat (0: none), the same as on Bedrock. */
 	public static MotorSpec motor(int index) {
-		return MOTORS.get(Math.max(0, Math.min(MOTORS.size() - 1, index - 1)));
+		return OUTBOARDS.get(Math.max(0, Math.min(OUTBOARDS.size() - 1, index - 1)));
 	}
 
 	public static int motorIndex(MotorSpec m) {
-		return MOTORS.indexOf(m) + 1;
+		return OUTBOARDS.indexOf(m) + 1;
 	}
 
 	public static BoatSpec boat(EntityType<?> type) {
@@ -83,6 +86,7 @@ public final class ModRegistry {
 
 	static void register() {
 		MOTORS = MotorSpec.load();
+		OUTBOARDS = MOTORS.stream().filter(m -> !m.inboard).toList();
 		BOATS = BoatSpec.load();
 		for (BoatSpec s : BOATS) {
 			ResourceKey<EntityType<?>> key = ResourceKey.create(Registries.ENTITY_TYPE, id(s.id));
@@ -104,8 +108,10 @@ public final class ModRegistry {
 
 		for (MotorSpec m : MOTORS) {
 			ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, id(m.id + "_mounted"));
-			MotorBlock block = Registry.register(BuiltInRegistries.BLOCK, key, new MotorBlock(BlockBehaviour.Properties.of()
-				.setId(key).mapColor(MapColor.METAL).strength(0.6F).sound(SoundType.METAL).noOcclusion(), m.id));
+			var props = BlockBehaviour.Properties.of().setId(key).mapColor(MapColor.METAL).sound(SoundType.METAL).noOcclusion();
+			MotorBlock block = Registry.register(BuiltInRegistries.BLOCK, key, m.inboard
+				? new InboardBlock(props.strength(2.0F).sound(SoundType.HEAVY_CORE), m.id)
+				: new MotorBlock(props.strength(0.6F), m.id));
 			MOTOR_BLOCKS.put(m.id, block);
 			MOTOR_ITEMS.put(m.id, item(m.id, p -> new MotorItem(block, p, m.id), new Item.Properties().stacksTo(1)));
 		}

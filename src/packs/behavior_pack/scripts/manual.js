@@ -1,4 +1,4 @@
-// The Outboard Handbook: how to fit motors to boats and rafts, fuel, and a page per motor.
+// The Outboard Handbook: how to fit motors to boats, rafts and ships, fuel, and a page per motor.
 import { ItemStack, system, world } from '@minecraft/server';
 import { ActionFormData } from '@minecraft/server-ui';
 import { MOTORS } from './data.js';
@@ -6,7 +6,7 @@ import { BOAT_MASS, topSpeed, vessel } from './water.js';
 import { NS } from './util.js';
 
 const GIVEN = `${NS}:handbook_given`;
-const PAGES = ['boat', 'raft', 'fuel'];
+const PAGES = ['boat', 'raft', 'ship', 'fuel'];
 
 function openIndex(player) {
   const form = new ActionFormData().title({ translate: `${NS}.handbook.title` }).body({ translate: `${NS}.handbook.intro` });
@@ -17,13 +17,15 @@ function openIndex(player) {
     if (res.selection < PAGES.length) {
       const p = PAGES[res.selection];
       const body = [{ translate: `${NS}.handbook.${p}_text` }];
-      if (p !== 'fuel') body.push({ text: '\n\n§2' }, { translate: `${NS}.controls.${p}` });
+      if (p !== 'fuel') body.push({ text: '\n\n§2' }, { translate: `${NS}.controls.${p === 'ship' ? 'raft' : p}` });
       return back(player, { translate: `${NS}.handbook.${p}` }, body);
     }
     const m = MOTORS[res.selection - PAGES.length];
     back(player, { translate: `item.${NS}:${m.id}.name` }, [
       { translate: `${NS}.info.${m.id}` }, { text: '\n\n' },
-      { translate: `${NS}.handbook.speed`, with: [String(Math.round(topSpeed(vessel([m], BOAT_MASS)) * 72))] },
+      m.inboard
+        ? { translate: `${NS}.handbook.ship_speed`, with: [String(Math.round(topSpeed(vessel([m], 4 + 2000)) * 72))] }
+        : { translate: `${NS}.handbook.speed`, with: [String(Math.round(topSpeed(vessel([m], BOAT_MASS)) * 72))] },
     ]);
   });
 }

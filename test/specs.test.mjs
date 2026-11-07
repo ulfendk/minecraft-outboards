@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MOTORS } from '../src/motors.mjs';
+import { MOTORS, OUTBOARDS } from '../src/motors.mjs';
 import { WOODS } from '../src/boats.mjs';
 import { BLOCKS, FUEL_MAX } from '../src/blocks.mjs';
 import { items, recipes } from '../src/items.mjs';
@@ -52,4 +52,12 @@ test('every motor and the wheel can be crafted, and recipes only use real ingred
     const body = Object.values(r)[0];
     for (const row of body.pattern ?? []) for (const ch of row) if (ch !== ' ') assert.ok(body.key[ch], `${body.description.identifier}: ${ch}`);
   }
+});
+
+test('boats keep their four outboards in the same order, and the inboard engine is a full block', () => {
+  assert.deepEqual(OUTBOARDS.map((m) => m.id), ['small_motor', 'medium_motor', 'large_motor', 'electric_motor']);
+  const engine = BLOCKS.find((b) => b.motor === 'inboard_engine');
+  assert.ok(engine?.inboard);
+  assert.deepEqual(engine.box, { origin: [-8, 0, -8], size: [16, 16, 16] });
+  for (const id of ['coal_block', 'lava_bucket', 'blaze_rod']) assert.ok(MOTORS.find((m) => m.inboard).fuels[id], id);
 });

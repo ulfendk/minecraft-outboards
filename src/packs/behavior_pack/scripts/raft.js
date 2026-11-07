@@ -1,12 +1,14 @@
-// Rafts: any blocks joined together on the water, with a motor (or several) clamped on.
-// Right-click a motor (or a ship's wheel) to cast off: the raft is found by scanning the
-// connected blocks (water.js scanRaft, the same as the Java edition), the driver sits down
-// on an invisible seat, and every time the raft has gone a block the whole thing is copied
-// one block on with a structure (blocks, chests and all), and the players and animals on
-// the deck are moved with it. Holding A or D long enough turns it a quarter turn.
+// Rafts: any blocks joined together on the water, with a motor (or several) clamped on, or
+// ships of up to 4,096 blocks with an inboard engine inside. Right-click a motor (or a ship's
+// wheel) to cast off: the raft is found by scanning the connected blocks (water.js
+// scanVessel, the same as the Java edition), the driver sits down on an invisible seat, and
+// every time the raft has gone a block the whole thing is copied one block on with
+// structures (blocks, chests and all; one per 64x64 tile, the most a structure holds), and the
+// players and animals on the deck are moved with it. Holding A or D long enough turns it a
+// quarter turn.
 import { BlockPermutation, StructureRotation, StructureSaveMode, system, world } from '@minecraft/server';
 import {
-  MAX_RAFT, REVERSE, rotateQuarter, scanRaft, STEP_LIMIT, step, vectorOf, vessel, waterLevel, WATERY, initial, yawOf,
+  MAX_RAFT, REVERSE, rotateQuarter, scanVessel, SHIP_STEP_LIMIT, STEP_LIMIT, step, vectorOf, vessel, waterLevel, WATERY, initial, yawOf,
 } from './water.js';
 import { isFuel, refuel } from './fuel.js';
 import {
@@ -18,6 +20,8 @@ const OPPOSITE = { north: 'south', south: 'north', east: 'west', west: 'east' };
 const turnFacing = (f, q) => FACINGS[(FACINGS.indexOf(f) + q + 4) % 4];
 const key = (p) => `${p.x},${p.y},${p.z}`;
 const add = (a, b) => ({ x: a.x + b.x, y: a.y + b.y, z: a.z + b.z });
+/** Structures hold at most 64 blocks across: bigger rafts are copied in tiles this size. */
+const TILE = 64;
 /** Blocks that hang on others: taken away first, so that nothing pops off as an item. */
 const HANGING = /(torch|lantern|ladder|sign|banner|button|lever|carpet|rail|redstone_wire|tripwire|pressure_plate|flower_pot|candle|vine|frame|bell|chain|skull|head|bed|door|trapdoor|_pane|bars|fence|wall|scaffolding|lily_pad)/;
 
@@ -60,16 +64,18 @@ function setState(dim, p, state, value) {
 export function startRaft(dim, at, player, { test } = {}) {
   if (busy(dim, at)) return fail(player, 'busy');
   const get = idAt(dim);
-  const found = scanRaft(get, [at.x, at.y, at.z], { max: MAX_RAFT });
+  const found = scanVessel(get, [at.x, at.y, at.z], (id) => !!motorOfBlock(id)?.inboard);
   if (!found.ok) return fail(player, found.reason);
   const cells = found.cells.map(([x, y, z]) => ({ x, y, z }));
   const motors = [];
+  const containers = [];
   let helm;
   for (const c of cells) {
     const block = dim.getBlock(c);
     const motor = motorOfBlock(block.typeId);
     if (motor) motors.push({ pos: c, motor, facing: block.permutation.getState(`${NS}:facing`) ?? 'north', fuel: motorFuel(block) });
     else if (isHelm(block.typeId)) helm = { pos: c, facing: block.permutation.getState('minecraft:cardinal_direction') ?? 'north' };
+    try { if (block.getComponent('minecraft:inventory')) containers.push(c); } catch {}
   }
   if (!motors.length) return fail(player, 'no_motor');
   // The raft goes where its first motor pushes it: the opposite way to its propeller.
@@ -82,7 +88,7 @@ export function startRaft(dim, at, player, { test } = {}) {
   const seat = dim.spawnEntity(`${NS}:raft_seat`, { x: seatAt.x + 0.5, y: seatAt.y, z: seatAt.z + 0.5 });
   seat.setRotation({ x: 0, y: yawOf(helm ? helm.facing : heading) });
   const raft = {
-    dim, cells, set: new Set(cells.map(key)), motors, helm, heading, water, seat, test,
+    dim, cells, set: new Set(cells.map(key)), motors, containers, helm, heading, water, seat, test,
     s: { ...initial(yawOf(heading)) }, progress: 0, turn: 0, blockedAt: -99,
   };
   rafts.set(seat.id, raft);
@@ -172,6 +178,48 @@ function bounds(cells) {
 
 const ROTATIONS = [StructureRotation.None, StructureRotation.Rotate90, StructureRotation.Rotate180, StructureRotation.Rotate270];
 
+/**
+ * The raft cut into tiles of at most TILE x TILE columns: each tile's bounds (round its own
+ * cells) and the cells in that box that are not part of the raft (left out of the copy).
+ * Kept until the raft turns; moving it on just moves the tiles.
+ */
+function tilesOf(raft) {
+  if (raft.tiles) return raft.tiles;
+  const { min } = bounds(raft.cells);
+  const groups = new Map();
+  for (const c of raft.cells) {
+    const k = `${Math.floor((c.x - min.x) / TILE)},${Math.floor((c.z - min.z) / TILE)}`;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(c);
+  }
+  raft.tiles = [...groups.values()].map((cells) => {
+    const b = bounds(cells);
+    const voids = [];
+    for (let x = b.min.x; x <= b.max.x; x++)
+      for (let y = b.min.y; y <= b.max.y; y++)
+        for (let z = b.min.z; z <= b.max.z; z++) {
+          if (!raft.set.has(key({ x, y, z }))) voids.push({ x: x - b.min.x, y: y - b.min.y, z: z - b.min.z });
+        }
+    return { ...b, voids };
+  });
+  return raft.tiles;
+}
+
+/** Takes the raft's blocks away (hanging things first, then from the top down). */
+function clear(raft, cells) {
+  const dim = raft.dim;
+  const order = [...cells].sort((a, b) => {
+    const ha = HANGING.test(blockAt(dim, a.x, a.y, a.z)?.typeId ?? '') ? 0 : 1;
+    const hb = HANGING.test(blockAt(dim, b.x, b.y, b.z)?.typeId ?? '') ? 0 : 1;
+    return ha - hb || b.y - a.y;
+  });
+  const waterPerm = BlockPermutation.resolve('minecraft:water');
+  const airPerm = BlockPermutation.resolve('minecraft:air');
+  for (const c of order) {
+    try { dim.getBlock(c).setPermutation(c.y <= raft.water ? waterPerm : airPerm); } catch {}
+  }
+}
+
 /** Moves the raft's blocks (and everyone on it) one block on, or a quarter turn round. */
 function shift(raft, move) {
   const { map } = plan(raft, move);
@@ -180,15 +228,17 @@ function shift(raft, move) {
   const dim = raft.dim;
   const sm = world.structureManager;
   const { min, max } = bounds(raft.cells);
-  const name = `${NS}:raft_${structureCount++ % 4}`;
-  try { sm.delete(name); } catch {}
-  const structure = sm.createFromWorld(name, dim, min, max, { includeEntities: false, includeBlocks: true, saveMode: StructureSaveMode.Memory });
-  // Only the raft's own blocks go along: everything else in the box is left as it is.
-  for (let x = min.x; x <= max.x; x++)
-    for (let y = min.y; y <= max.y; y++)
-      for (let z = min.z; z <= max.z; z++) {
-        if (!raft.set.has(key({ x, y, z }))) structure.setBlockPermutation({ x: x - min.x, y: y - min.y, z: z - min.z }, undefined);
-      }
+
+  // Copy every tile first: only the raft's own blocks go along, everything else in the box
+  // is left as it is.
+  const tiles = tilesOf(raft);
+  const copies = tiles.map((t) => {
+    const name = `${NS}:raft_${structureCount++ % 1024}`;
+    try { sm.delete(name); } catch {}
+    const structure = sm.createFromWorld(name, dim, t.min, t.max, { includeEntities: false, includeBlocks: true, saveMode: StructureSaveMode.Memory });
+    for (const v of t.voids) structure.setBlockPermutation(v, undefined);
+    return { t, name, structure };
+  });
 
   // Who is on board (standing on the deck, or in the box over it).
   const passengers = [];
@@ -200,22 +250,28 @@ function shift(raft, move) {
     }
   } catch {}
 
-  // Take the raft away (hanging things first, then from the top down) and put it down again.
-  const order = [...raft.cells].sort((a, b) => {
-    const ha = HANGING.test(blockAt(dim, a.x, a.y, a.z)?.typeId ?? '') ? 0 : 1;
-    const hb = HANGING.test(blockAt(dim, b.x, b.y, b.z)?.typeId ?? '') ? 0 : 1;
-    return ha - hb || b.y - a.y;
-  });
-  const waterPerm = BlockPermutation.resolve('minecraft:water');
-  const airPerm = BlockPermutation.resolve('minecraft:air');
-  for (const c of order) {
-    try { dim.getBlock(c).setPermutation(c.y <= raft.water ? waterPerm : airPerm); } catch {}
+  // The copies hold what is in the chests: empty them before their blocks are replaced, or
+  // the old ones spill their contents.
+  for (const c of raft.containers) {
+    try { dim.getBlock(c).getComponent('minecraft:inventory').container.clearAll(); } catch {}
   }
+
   const moved = raft.cells.map(map);
-  const nb = bounds(moved);
+  const movedSet = new Set(moved.map(key));
   const q = move.q ? ((move.q % 4) + 4) % 4 : 0;
-  sm.place(structure, dim, nb.min, { rotation: ROTATIONS[q], includeEntities: false, waterlogged: false });
-  try { sm.delete(name); } catch {}
+  // Turning, the whole raft is taken away and put down again. Going straight on, the copy is
+  // put down over the raft (block for block), and only the cells it has left are cleared:
+  // for a big ship, a slice instead of the whole thing.
+  if (q) clear(raft, raft.cells);
+  for (const { t, name, structure } of copies) {
+    const a = map(t.min), b = map(t.max);
+    const at = { x: Math.min(a.x, b.x), y: t.min.y, z: Math.min(a.z, b.z) };
+    sm.place(structure, dim, at, { rotation: ROTATIONS[q], includeEntities: false, waterlogged: false });
+    try { sm.delete(name); } catch {}
+  }
+  if (!q) clear(raft, raft.cells.filter((c) => !movedSet.has(key(c))));
+  if (q) raft.tiles = undefined;
+  else for (const t of raft.tiles) { t.min = map(t.min); t.max = map(t.max); }
 
   // The motors and the wheel turn with the raft.
   for (const m of raft.motors) {
@@ -232,8 +288,9 @@ function shift(raft, move) {
       setState(dim, raft.helm.pos, 'minecraft:cardinal_direction', raft.helm.facing);
     }
   }
+  raft.containers = raft.containers.map(map);
   raft.cells = moved;
-  raft.set = new Set(moved.map(key));
+  raft.set = movedSet;
   if (q) raft.heading = turnFacing(raft.heading, q);
 
   // Everyone on board goes along.
@@ -289,7 +346,8 @@ function drive(raft, now) {
   const v = vessel(fuelled.map((m) => m.motor), 4 + raft.cells.length);
   const yaw0 = yawOf(raft.heading);
   const s = step({ ...raft.s, yaw: yaw0 }, input, v, { afloat: true, fuel: fuelled.length > 0 });
-  s.speed = Math.max(-STEP_LIMIT * REVERSE, Math.min(STEP_LIMIT, s.speed));
+  const limit = raft.cells.length > MAX_RAFT ? SHIP_STEP_LIMIT : STEP_LIMIT;
+  s.speed = Math.max(-limit * REVERSE, Math.min(limit, s.speed));
   // Quarter turns: count up how far it would have turned.
   const dy = ((s.yaw - yaw0 + 540) % 360) - 180;
   raft.turn = input.side ? raft.turn + dy : raft.turn * 0.8;
@@ -333,7 +391,10 @@ function drive(raft, now) {
 
   const running = fuelled.length > 0 && Math.abs(s.throttle) > 0.01;
   if (running && now % 6 === 0 && fuelled.some((m) => !m.motor.silent)) {
-    sound(raft.dim, 'mob.bee.loop', raft.motors[0].pos, 0.3 + 0.5 * Math.abs(s.throttle), 0.4 + 0.5 * Math.abs(s.throttle));
+    // An inboard engine is a deep, loud rumble.
+    const big = fuelled.some((m) => m.motor.inboard);
+    const t = Math.abs(s.throttle);
+    sound(raft.dim, 'mob.bee.loop', raft.motors[0].pos, big ? 0.8 + 0.6 * t : 0.3 + 0.5 * t, big ? 0.2 + 0.25 * t : 0.4 + 0.5 * t);
   }
   if (driver && now % 5 === 0 && !(raft.hudAfter > now)) {
     const tank = raft.motors.reduce((t, m) => t + m.motor.tank, 0);

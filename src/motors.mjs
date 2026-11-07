@@ -1,6 +1,7 @@
-// The four outboard motors: what they do, what they burn, their recipe, icon and model.
-// The model is built by addMotor(), once on the stern of every motorboat and once as the
-// block that clamps onto a raft.
+// The motors: four outboards and the inboard ship's engine. What they do, what they burn,
+// their recipe, icon and model. An outboard's model is built by addMotor(), once on the stern
+// of every motorboat and once as the block that clamps onto a raft; the inboard engine is a
+// block that goes inside a ship's hull (src/blocks.mjs) and never on a boat.
 import { commonMaterials, metal, paint, gloss, lamp } from './lib/materials.mjs';
 
 /**
@@ -10,6 +11,7 @@ import { commonMaterials, metal, paint, gloss, lamp } from './lib/materials.mjs'
  */
 const COMBUSTION = { coal: 3, charcoal: 3, blaze_rod: 6 };
 const BATTERY = { redstone: 1, redstone_block: 9 };
+const HEAVY = { coal_block: 12, lava_bucket: 12, blaze_rod: 4 };
 
 export const MOTORS = [
   {
@@ -40,7 +42,17 @@ export const MOTORS = [
     recipe: { pattern: ['CRC', ' I ', ' T '], key: { C: 'copper_ingot', R: 'redstone_block', I: 'iron_ingot', T: 'iron_trapdoor' } },
     look: { cowl: '#2c2e30', stripe: '#f2b705', head: [4, 5, 6], shaft: [2, 17], prop: 3, tiller: 10, battery: true },
   },
+  {
+    id: 'inboard_engine', name: 'Inboard Engine (20,000 hp)', hp: 20000, kind: 'inboard', inboard: true,
+    thrust: 300, maxSpeed: 0.5, burn: 1 / 300, tank: 12, fuels: HEAVY,
+    info: 'A ship’s diesel the size of a block. Place it inside the hull, facing the way the ship should go: it pushes ships of up to 4,096 blocks. It burns coal blocks, lava and blaze rods, and a full tank lasts three minutes at full throttle. Too big for a boat.',
+    recipe: { pattern: ['NPN', 'BRB', 'NCN'], key: { N: 'iron_block', P: 'piston', B: 'blast_furnace', R: 'redstone_block', C: 'copper_block' } },
+    look: { cowl: '#7a1f1a', stripe: '#c9d0d4' },
+  },
 ];
+
+/** The motors that fit a boat, numbered 1..4 on the motorboat in this order. */
+export const OUTBOARDS = MOTORS.filter((m) => !m.inboard);
 
 export const motorById = (id) => MOTORS.find((m) => m.id === id);
 
@@ -180,10 +192,31 @@ MOTORS[3].icon = {
   ],
   palette: { b: '#2b2b2b', r: '#c8261b', k: '#888888', y: '#f2b705', l: '#3a3d40', g: '#202224', c: '#2c2e30', w: '#b9c0c6' },
 };
+MOTORS[4].icon = {
+  rows: [
+    '..........kk....',
+    '..........kk....',
+    '..........kk....',
+    '...ssssssskk....',
+    '..shhshhshhhs...',
+    '..cccccccccccc..',
+    '..cssssssssssc..',
+    '..cccccccccccc..',
+    'ffcccccccccccc..',
+    'ffcccccccccccc..',
+    'ffcccccccccccc..',
+    '..cccccccccccc..',
+    '..llllllllllll..',
+    '.l............l.',
+    '................',
+    '................',
+  ],
+  palette: { c: '#7a1f1a', s: '#c9d0d4', h: '#3a3d40', k: '#202224', f: '#b9c0c6', l: '#3a3d40' },
+};
 
 /** What the scripts and the Java mod need to know about each motor. */
 export const motorRecord = (m) => ({
   id: m.id, hp: m.hp, kind: m.kind, thrust: m.thrust, maxSpeed: m.maxSpeed, burn: m.burn, tank: m.tank,
-  silent: !!m.silent,
+  silent: !!m.silent, inboard: !!m.inboard,
   fuels: Object.fromEntries(Object.entries(m.fuels).map(([k, v]) => [`minecraft:${k}`, v])),
 });

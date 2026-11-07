@@ -12,7 +12,7 @@ import com.google.gson.reflect.TypeToken;
 public final class MotorSpec {
 	public String id;
 	public int hp;
-	/** "combustion" or "electric". */
+	/** "combustion", "electric" or "inboard". */
 	public String kind;
 	public double thrust;
 	public double maxSpeed;
@@ -20,6 +20,8 @@ public final class MotorSpec {
 	public double burn;
 	public int tank;
 	public boolean silent;
+	/** An inboard engine: goes inside a ship's hull, never on a boat. */
+	public boolean inboard;
 	/** Item id -> tank units. */
 	public Map<String, Integer> fuels;
 

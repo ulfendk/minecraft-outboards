@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  BOAT_MASS, initial, MAX_RAFT, rotateQuarter, scanRaft, step, topSpeed, vessel, waterLevel, dirOf, yawOf,
+  BOAT_MASS, initial, MAX_RAFT, MAX_SHIP, rotateQuarter, scanRaft, scanVessel, step, topSpeed, vessel, waterLevel, dirOf, yawOf,
 } from '../src/lib/water.mjs';
 import { MOTORS, motorById } from '../src/motors.mjs';
 
@@ -105,6 +105,43 @@ test('a raft that touches the shore or is too big does not go', () => {
   for (let x = -9; x <= 9; x++) for (let z = -9; z <= 9; z++) big.set(x, 0, z, 'minecraft:oak_planks');
   assert.equal(scanRaft(big.get, [0, 0, 0]).reason, 'too_big');
   assert.ok(19 * 19 > MAX_RAFT);
+});
+
+/** A wide sea with a rectangular barge of planks at y 0. */
+function barge(w, d) {
+  const w2 = new Map();
+  const set = (x, y, z, id) => w2.set(`${x},${y},${z}`, id);
+  for (let x = 0; x < w; x++) for (let z = 0; z < d; z++) set(x, 0, z, 'minecraft:oak_planks');
+  const get = (x, y, z) => w2.get(`${x},${y},${z}`) ?? (y <= 0 ? 'minecraft:water' : 'minecraft:air');
+  return { set, get };
+}
+const isInboard = (id) => id === 'outboards:inboard_engine_mounted';
+
+test('more than 256 blocks is a ship: it needs an inboard engine, and 4,096 blocks at most', () => {
+  const raft = barge(30, 10);
+  raft.set(5, 1, 5, 'outboards:large_motor_mounted');
+  assert.equal(scanVessel(raft.get, [0, 0, 0], isInboard).reason, 'too_big');
+  const ship = barge(30, 10);
+  ship.set(5, 1, 5, 'outboards:inboard_engine_mounted');
+  const r = scanVessel(ship.get, [0, 0, 0], isInboard);
+  assert.ok(r.ok, r.reason);
+  assert.equal(r.cells.length, 301);
+  const small = barge(4, 4);
+  assert.ok(scanVessel(small.get, [0, 0, 0], isInboard).ok);
+  const huge = barge(80, 64);
+  huge.set(5, 1, 5, 'outboards:inboard_engine_mounted');
+  assert.ok(80 * 64 > MAX_SHIP);
+  assert.equal(scanVessel(huge.get, [0, 0, 0], isInboard).reason, 'too_big');
+});
+
+test('one inboard engine drives a ship of a thousand blocks at full speed, two a ship of 4,096 at over 20 km/h', () => {
+  const inboard = motorById('inboard_engine');
+  assert.equal(kmh(topSpeed(vessel([inboard], 4 + 1000))), kmh(inboard.maxSpeed));
+  const one = topSpeed(vessel([inboard], 4 + MAX_SHIP));
+  const two = topSpeed(vessel([inboard, inboard], 4 + MAX_SHIP));
+  assert.ok(kmh(one) >= 10, `${kmh(one)} km/h`);
+  assert.ok(kmh(two) > 20, `${kmh(two)} km/h`);
+  assert.ok(Math.abs((inboard.tank / inboard.burn) / 1200 - 3) < 0.5);
 });
 
 test('a raft on dry land is not afloat', () => {

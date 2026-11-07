@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { build, MOTOR_VARS } from './build.mjs';
 import { boatAnimation } from '../src/lib/anim.mjs';
 import { NS } from '../src/lib/constants.mjs';
-import { MOTORS } from '../src/motors.mjs';
+import { MOTORS, OUTBOARDS } from '../src/motors.mjs';
 import { render, sheet } from './render.mjs';
 
 const RP = 'build/resource_pack';
@@ -22,7 +22,7 @@ const thumbs = [];
 const oak = boats.find((b) => b.wood === 'oak');
 const { geo, tex } = await load('entity', oak.id);
 const anim = Object.values(boatAnimation(oak, 'preview').animations)[0];
-for (const [i, motor] of MOTORS.entries()) {
+for (const [i, motor] of OUTBOARDS.entries()) {
   const views = [
     render(geo, tex, { anim, vars: MOTOR_VARS(i), yaw: 35 }),
     render(geo, tex, { anim, vars: MOTOR_VARS(i, true), yaw: 145, pitch: 10 }),

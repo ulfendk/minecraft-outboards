@@ -15,8 +15,12 @@ export const SPOOL = 0.04;
 export const REVERSE = 0.5;
 /** Raft size limit (blocks), on both editions. */
 export const MAX_RAFT = 256;
+/** With an inboard engine aboard, a ship may be this big. */
+export const MAX_SHIP = 4096;
 /** Bedrock rafts move a whole block at a time: at most this fast (blocks/tick). */
 export const STEP_LIMIT = 0.25;
+/** ... and ships bigger than MAX_RAFT at most this fast, so every step has time to finish. */
+export const SHIP_STEP_LIMIT = 0.15;
 
 export const NO_INPUT = { fwd: 0, side: 0 };
 
@@ -128,6 +132,16 @@ export function scanRaft(get, start, { max = MAX_RAFT } = {}) {
   if (wet === 0) return { ok: false, reason: 'not_afloat' };
   if (wet < bottoms.size / 2) return { ok: false, reason: 'grounded' };
   return { ok: true, cells, min, max: max3 };
+}
+
+/**
+ * Finds the raft or ship a block belongs to: up to MAX_RAFT blocks, or up to MAX_SHIP when an
+ * inboard engine is aboard (isInboard(id) says which blocks are one).
+ */
+export function scanVessel(get, start, isInboard) {
+  const r = scanRaft(get, start, { max: MAX_SHIP });
+  if (r.ok && r.cells.length > MAX_RAFT && !r.cells.some((c) => isInboard(get(...c)))) return { ok: false, reason: 'too_big' };
+  return r;
 }
 
 /** The water level a raft floats at: the highest water block next to or under it. */

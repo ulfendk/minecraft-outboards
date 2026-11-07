@@ -2,11 +2,11 @@
 // for one of these; every tick the script reads the driver's input, runs the shared water
 // model (water.js, the same as the Java edition's Water.java) and moves the boat.
 import { ItemStack, system, world } from '@minecraft/server';
-import { BOATS, MOTORS } from './data.js';
+import { BOATS } from './data.js';
 import { BOAT_MASS, initial, step, vessel } from './water.js';
 import { isFuel, refuel } from './fuel.js';
 import {
-  blockAt, boatOf, driverOf, isCreative, kmh, LOG, MOTOR_BY_ID, nearPlayers, NS, percent, readInput,
+  blockAt, boatOf, driverOf, isCreative, kmh, LOG, MOTOR_BY_ID, nearPlayers, NS, OUTBOARDS, percent, readInput,
   ridersOf, sound, tell, waterSurface, consume,
 } from './util.js';
 
@@ -21,7 +21,7 @@ const testInput = new Map();
 export function motorOf(e) {
   let i = 1;
   try { i = e.getProperty(`${NS}:motor`) ?? 1; } catch {}
-  return MOTORS[Math.max(0, Math.min(MOTORS.length - 1, i - 1))];
+  return OUTBOARDS[Math.max(0, Math.min(OUTBOARDS.length - 1, i - 1))];
 }
 
 function stateOf(e) {
@@ -166,7 +166,7 @@ export function fitMotor(boat, motorId, player) {
   boat.remove();
   const e = dim.spawnEntity(`${NS}:${spec.id}`, loc);
   e.setRotation({ x: 0, y: yaw });
-  e.setProperty(`${NS}:motor`, MOTORS.findIndex((m) => m.id === motorId) + 1);
+  e.setProperty(`${NS}:motor`, OUTBOARDS.findIndex((m) => m.id === motorId) + 1);
   e.setDynamicProperty(FUEL, 0);
   e.setDynamicProperty(STATE, JSON.stringify({ yaw }));
   const rideable = e.getComponent('minecraft:rideable');
@@ -223,6 +223,13 @@ export function setupBoats() {
     }
     const motor = itemStack && MOTOR_BY_ID[itemStack.typeId.replace(`${NS}:`, '')];
     if (!motor || !itemStack.typeId.startsWith(`${NS}:`)) return;
+    if (motor.inboard) {
+      if (target.typeId === 'minecraft:boat' || target.typeId === 'minecraft:chest_boat') {
+        ev.cancel = true;
+        system.run(() => tell(player, `${NS}.inboard_no_boat`));
+      }
+      return;
+    }
     if (target.typeId === 'minecraft:boat') {
       ev.cancel = true;
       system.run(() => {

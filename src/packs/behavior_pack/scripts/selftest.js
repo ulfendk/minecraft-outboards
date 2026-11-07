@@ -9,7 +9,8 @@ const at = (ticks, fn) => new Promise((resolve) => system.runTimeout(() => { try
 
 /**
  * Used by tools/bds-test.sh: checks that every motorboat and item exists, then drives a
- * motorboat across a pond, and sends a raft (with a chest on it) forward and round a corner.
+ * motorboat across a pond, sends a raft (with a chest on it) forward and round a corner, and
+ * sails a ship of more than 256 blocks with an inboard engine.
  * Message = space-separated expected entity ids.
  */
 export async function selfTest(message) {
@@ -101,6 +102,59 @@ export async function selfTest(message) {
     const left = before?.filter((c) => !set.has(`${c.x},${c.y},${c.z}`) && dim.getBlock(c).typeId === c.id) ?? [];
     if (left.length) problems.push(`raft left ${left.length} blocks behind when turning`);
     moor(raft);
+  });
+
+  // 3. A ship: a 70x4 barge of planks (280 blocks, more than a raft may have, and wider than
+  //    one structure tile) with a chest. With only an outboard it is too big; with an inboard
+  //    engine on the deck, facing east, it sails east and comes through in one piece.
+  const S = { x: -35, y: -61, z: -24 };
+  const L = 70;
+  dim.runCommand(`fill ${S.x} ${S.y} ${S.z} ${S.x + L - 1} ${S.y} ${S.z + 3} oak_planks`);
+  const chestAt = { x: S.x + 35, y: S.y + 1, z: S.z + 1 };
+  dim.runCommand(`setblock ${chestAt.x} ${chestAt.y} ${chestAt.z} chest`);
+  dim.getBlock(chestAt).getComponent('minecraft:inventory').container.addItem(new ItemStack('minecraft:emerald', 5));
+  const outboardAt = { x: S.x - 1, y: S.y, z: S.z + 1 };
+  mountMotor(dim, outboardAt, 'small_motor', 'west');
+  const ob = dim.getBlock(outboardAt);
+  ob.setPermutation(ob.permutation.withState(`${NS}:fuel`, 12));
+  let ship;
+  await at(5, () => {
+    const r = startRaft(dim, outboardAt, null, { test: { fwd: 1, side: 0 } });
+    if (!r?.failed) {
+      problems.push('a 282-block raft with only an outboard cast off');
+      moor(r);
+    } else if (r.failed !== 'too_big') problems.push(`the big raft failed for ${r.failed}, not too_big`);
+    dim.runCommand(`setblock ${outboardAt.x} ${outboardAt.y} ${outboardAt.z} water`);
+    const engineAt = { x: S.x + 1, y: S.y + 1, z: S.z + 2 };
+    mountMotor(dim, engineAt, 'inboard_engine', 'west');
+    const eb = dim.getBlock(engineAt);
+    eb.setPermutation(eb.permutation.withState(`${NS}:fuel`, 12));
+    ship = startRaft(dim, engineAt, null, { test: { fwd: 1, side: 0 } });
+    if (!ship || ship.failed) problems.push(`the ship did not start (${ship?.failed})`);
+    else if (ship.cells.length !== L * 4 + 2) problems.push(`the ship has ${ship.cells.length} blocks, expected ${L * 4 + 2}`);
+    else if (ship.heading !== 'east') problems.push(`the ship heads ${ship.heading}, not east`);
+  });
+  await at(80, () => {
+    if (!ship || ship.failed) return;
+    const chest = ship.cells.find((c) => dim.getBlock(c).typeId === 'minecraft:chest');
+    const dx = chest ? chest.x - chestAt.x : 0;
+    console.log(`${LOG} selftest ship moved ${dx} blocks east`);
+    if (dx < 3) problems.push(`the ship moved ${dx} blocks east`);
+    moor(ship);
+    let planks = 0, emeralds = 0;
+    for (let x = S.x - 2; x < S.x + L + 20; x++) for (let z = S.z - 1; z <= S.z + 4; z++) {
+      if (dim.getBlock({ x, y: S.y, z }).typeId === 'minecraft:oak_planks') planks++;
+    }
+    if (planks !== L * 4) problems.push(`after sailing, ${planks} planks where there were ${L * 4}`);
+    if (dim.getBlock({ x: S.x, y: S.y, z: S.z }).typeId === 'minecraft:oak_planks' && dx >= 1) problems.push('the ship left its stern behind');
+    if (chest) {
+      const items = dim.getBlock(chest).getComponent('minecraft:inventory').container;
+      for (let i = 0; i < items.size; i++) if (items.getItem(i)?.typeId === 'minecraft:emerald') emeralds += items.getItem(i).amount;
+    }
+    if (emeralds !== 5) problems.push(`the ship's chest has ${emeralds} emeralds`);
+    // Nothing spilt from the chests on the way (the raft's and the ship's).
+    const dropped = dim.getEntities({ type: 'minecraft:item', location: { x: S.x + L / 2, y: S.y, z: S.z }, maxDistance: 80 });
+    if (dropped.length) problems.push(`${dropped.length} items dropped while the raft and the ship sailed: ${dropped.map((e) => { const it = e.getComponent('minecraft:item')?.itemStack; return `${it?.typeId}x${it?.amount}@${Math.floor(e.location.x)},${Math.floor(e.location.y)},${Math.floor(e.location.z)}`; }).join(' ')}`);
   });
 
   await at(10, () => {

@@ -106,7 +106,7 @@ public class OutboardGameTests {
 		List<MotorboatEntity> all = new java.util.ArrayList<>();
 		for (var spec : ModRegistry.BOATS) {
 			MotorboatEntity b = helper.spawn(ModRegistry.boatType(spec), new Vec3(4.5 + (i % 5) * 6, 3.7, 6.5 + (i / 5) * 8));
-			b.setMotor(ModRegistry.MOTORS.get(i % ModRegistry.MOTORS.size()));
+			b.setMotor(ModRegistry.OUTBOARDS.get(i % ModRegistry.OUTBOARDS.size()));
 			all.add(b);
 			i++;
 		}
@@ -214,6 +214,59 @@ public class OutboardGameTests {
 			if (diamonds != 3) helper.fail("the chest has " + diamonds + " diamonds");
 			var displays = helper.getLevel().getEntities(EntityTypes.BLOCK_DISPLAY, new AABB(helper.absolutePos(BlockPos.ZERO)).inflate(64), d -> d.entityTags().contains(RaftEntity.DISPLAY_TAG));
 			if (!displays.isEmpty()) helper.fail(displays.size() + " block displays left behind");
+			helper.succeed();
+		});
+	}
+
+	/**
+	 * A barge of 300 blocks is too big for an outboard; with an inboard engine on the deck it is
+	 * a ship: it casts off, sails north and is put down again in one piece.
+	 */
+	@GameTest(maxTicks = 200, structure = AREA)
+	public void shipWithInboardSails(GameTestHelper helper) {
+		pond(helper);
+		for (int x = 5; x < 35; x++) for (int z = 20; z < 30; z++) helper.setBlock(new BlockPos(x, 3, z), Blocks.OAK_PLANKS);
+		helper.setBlock(new BlockPos(20, 4, 25), Blocks.CHEST);
+		if (helper.getLevel().getBlockEntity(helper.absolutePos(new BlockPos(20, 4, 25))) instanceof Container c) c.setItem(0, new ItemStack(Items.EMERALD, 4));
+		BlockPos outboard = new BlockPos(20, 3, 30);
+		helper.setBlock(outboard, ModRegistry.MOTOR_BLOCKS.get("large_motor").defaultBlockState().setValue(MotorBlock.FACING, Direction.SOUTH).setValue(MotorBlock.FUEL, 12));
+		BlockPos engine = new BlockPos(20, 4, 28);
+		RaftEntity[] ship = new RaftEntity[1];
+		double[] z0 = new double[1];
+		helper.runAfterDelay(2, () -> {
+			if (RaftEntity.start(helper.getLevel(), helper.absolutePos(outboard), null) != null) helper.fail("a 302-block raft with only an outboard cast off");
+			else if (!"too_big".equals(RaftEntity.lastFailure)) helper.fail("the big raft failed for " + RaftEntity.lastFailure);
+			helper.setBlock(outboard, Blocks.WATER);
+			helper.setBlock(engine, ModRegistry.MOTOR_BLOCKS.get("inboard_engine").defaultBlockState().setValue(MotorBlock.FACING, Direction.SOUTH).setValue(MotorBlock.FUEL, 12));
+			ship[0] = RaftEntity.start(helper.getLevel(), helper.absolutePos(engine), null);
+			if (ship[0] == null) {
+				helper.fail("the ship did not start: " + RaftEntity.lastFailure);
+				return;
+			}
+			if (ship[0].parts().size() != 302) helper.fail("the ship has " + ship[0].parts().size() + " blocks, expected 302");
+			ship[0].testInput = new Water.Input(1, 0);
+			z0[0] = ship[0].getZ();
+		});
+		helper.runAfterDelay(50, () -> {
+			if (ship[0] == null) return;
+			if (ship[0].getZ() > z0[0] - 3) helper.fail("the ship did not sail north: z " + ship[0].getZ() + " from " + z0[0]);
+			ship[0].testInput = null;
+		});
+		helper.runAfterDelay(60, () -> {
+			if (ship[0] == null) return;
+			if (!ship[0].isRemoved()) helper.fail("the ship did not moor without a driver");
+			int planks = 0, engines = 0, emeralds = 0;
+			for (int x = 0; x < 40; x++) for (int z = 0; z < 40; z++) for (int y = 1; y <= 6; y++) {
+				BlockPos p = helper.absolutePos(new BlockPos(x, y, z));
+				var st = helper.getLevel().getBlockState(p);
+				if (st.is(Blocks.OAK_PLANKS)) planks++;
+				if (st.is(ModRegistry.MOTOR_BLOCKS.get("inboard_engine"))) engines++;
+				if (helper.getLevel().getBlockEntity(p) instanceof ChestBlockEntity chest) {
+					for (int i = 0; i < chest.getContainerSize(); i++) if (chest.getItem(i).is(Items.EMERALD)) emeralds += chest.getItem(i).getCount();
+				}
+			}
+			if (planks != 300 || engines != 1) helper.fail("after mooring: " + planks + " planks, " + engines + " engines");
+			if (emeralds != 4) helper.fail("the chest has " + emeralds + " emeralds");
 			helper.succeed();
 		});
 	}

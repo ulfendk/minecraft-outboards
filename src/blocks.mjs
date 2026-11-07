@@ -1,5 +1,5 @@
 // Blocks: a mounted motor of every size (what a motor item becomes when you clamp it onto
-// a raft) and the ship's wheel. Each is modelled once; the build writes it as Bedrock block
+// a raft), the inboard engine (placed inside a ship's hull) and the ship's wheel. Each is modelled once; the build writes it as Bedrock block
 // geometry and as a Java block model (javaBlockModel()).
 import { NS } from './lib/constants.mjs';
 import { buildGeometry } from './lib/model.mjs';
@@ -31,6 +31,27 @@ function motorBlockModel(motor) {
   return m.build();
 }
 
+/**
+ * Inboard engine filling the block: an engine block on two bearers, with a row of cylinder
+ * heads, a turbo and an exhaust stack on top; the gearbox and shaft coupling point north,
+ * towards the propeller (so facing works the same as on the outboards).
+ */
+function inboardBlockModel(motor) {
+  const m = new Model();
+  const b = m.bone('root', null, [0, 0, 0]);
+  const cowl = `m_${motor.id}_cowl`, stripe = `m_${motor.id}_stripe`;
+  b.box([-7, 0, -7], [3, 2, 14], 'leg').box([4, 0, -7], [3, 2, 14], 'leg'); // bearers
+  b.box([-6, 2, -5], [12, 8, 12], cowl); // engine block
+  b.box([-6, 6, -5], [12, 1, 12], stripe, { inflate: 0.05 });
+  for (const z of [-4, 0, 4]) b.box([-5, 10, z], [4, 2, 3], 'leg').box([1, 10, z], [4, 2, 3], 'leg'); // heads
+  b.box([-1, 10, -5], [2, 3, 12], 'chrome'); // rocker cover
+  b.box([-3, 2, -8], [6, 6, 3], 'leg'); // gearbox
+  b.box([-1, 4, -8], [2, 2, 1], 'propeller', { inflate: 0.1 }); // shaft coupling
+  b.box([-6, 10, -6], [3, 3, 3], 'chrome'); // turbo
+  b.box([3, 10, 5], [2, 6, 2], 'grip'); // exhaust stack
+  return m.build();
+}
+
 /** Ship's wheel on a pedestal, facing north: the driver stands behind it (south). */
 function helmModel() {
   const m = new Model();
@@ -57,8 +78,10 @@ const helmMaterials = () => ({
 
 export const BLOCKS = [
   ...MOTORS.map((motor) => ({
-    id: `${motor.id}_mounted`, motor: motor.id, name: motor.name, model: motorBlockModel(motor), materials: motorMaterials(),
-    box: { origin: [-4, 0, -2], size: [8, 16, 10] }, loot: motor.id, sound: 'metal',
+    id: `${motor.id}_mounted`, motor: motor.id, name: motor.name, materials: motorMaterials(), loot: motor.id, sound: 'metal',
+    ...(motor.inboard
+      ? { model: inboardBlockModel(motor), box: { origin: [-8, 0, -8], size: [16, 16, 16] }, inboard: true }
+      : { model: motorBlockModel(motor), box: { origin: [-4, 0, -2], size: [8, 16, 10] } }),
   })),
   {
     id: 'helm', name: "Ship's Wheel", model: helmModel(), materials: helmMaterials(), helm: true,

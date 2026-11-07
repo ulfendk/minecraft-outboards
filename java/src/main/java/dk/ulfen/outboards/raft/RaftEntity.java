@@ -149,7 +149,7 @@ public class RaftEntity extends Entity {
 	public static @Nullable RaftEntity start(ServerLevel level, BlockPos at, @Nullable Player player) {
 		lastFailure = null;
 		Water.Getter get = (x, y, z) -> idAt(level, new BlockPos(x, y, z));
-		Water.Scan scan = Water.scanRaft(get, new Water.Cell(at.getX(), at.getY(), at.getZ()), Water.MAX_RAFT);
+		Water.Scan scan = Water.scanVessel(get, new Water.Cell(at.getX(), at.getY(), at.getZ()), RaftEntity::inboardId);
 		if (!scan.ok()) return fail(player, scan.reason());
 		BlockPos firstMotor = null, helm = null;
 		int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE, minY = Integer.MAX_VALUE;
@@ -221,6 +221,22 @@ public class RaftEntity extends Entity {
 		return raft;
 	}
 
+	/** Is this block id an inboard engine (which lets a raft be a ship of up to MAX_SHIP blocks)? */
+	private static boolean inboardId(@Nullable String id) {
+		if (id == null) return false;
+		for (MotorSpec m : ModRegistry.MOTORS) if (m.inboard && id.equals("outboards:" + m.id + "_mounted")) return true;
+		return false;
+	}
+
+	/**
+	 * How often (in ticks) the block displays are moved: every tick for a raft, less often for a
+	 * big ship (with the clients gliding them there in between), so that a ship of thousands of
+	 * blocks doesn't send thousands of updates every tick.
+	 */
+	private int displayEvery() {
+		return Mth.clamp((parts.size() + 511) / 512, 1, 8);
+	}
+
 	private static Component motorsText(int n) {
 		return n == 1 ? Component.translatable("outboards.motors.one") : Component.translatable("outboards.motors.many", n);
 	}
@@ -246,7 +262,7 @@ public class RaftEntity extends Entity {
 		d.setBlockState(part.state);
 		// Turn round the middle of the block, not its corner.
 		d.setTransformation(new Transformation(new Vector3f(-0.5F, 0, -0.5F), null, null, null));
-		d.setPosRotInterpolationDuration(2);
+		d.setPosRotInterpolationDuration(Math.max(2, displayEvery()));
 		d.addTag(DISPLAY_TAG);
 		d.addTag(DISPLAY_TAG + "." + this.getStringUUID());
 		Vec3 c = cellCentre(part, this.position(), this.getYRot());
@@ -328,8 +344,8 @@ public class RaftEntity extends Entity {
 			this.yRotO = this.getYRot();
 			this.setPos(nx, this.getY(), nz);
 			this.setYRot(turned);
-			placeDisplays();
 		}
+		if (this.tickCount % displayEvery() == 0) placeDisplays();
 		state = s;
 
 		// Fuel
@@ -347,11 +363,16 @@ public class RaftEntity extends Entity {
 			tank += m.tank;
 			fuel += p.fuel;
 		}
-		boolean loud = false;
-		for (MotorSpec m : running) loud |= !m.silent;
+		boolean loud = false, big = false;
+		for (MotorSpec m : running) {
+			loud |= !m.silent;
+			big |= m.inboard;
+		}
 		if (loud && Math.abs(s.throttle) > 0.01 && this.tickCount % 6 == 0) {
+			// An inboard engine is a deep, loud rumble.
+			double t = Math.abs(s.throttle);
 			level.playSound(null, this.blockPosition(), SoundEvents.BEE_LOOP, SoundSource.NEUTRAL,
-				(float) (0.3 + 0.5 * Math.abs(s.throttle)), (float) (0.4 + 0.5 * Math.abs(s.throttle)));
+				(float) (big ? 0.8 + 0.6 * t : 0.3 + 0.5 * t), (float) (big ? 0.5 + 0.25 * t : 0.4 + 0.5 * t));
 		}
 		if (driver instanceof ServerPlayer sp && this.tickCount % 5 == 0 && this.tickCount > hudAfter) {
 			Component throttle = s.throttle < -0.01 ? Component.translatable("outboards.hud.reverse") : Component.literal(Math.round(s.throttle * 100) + "%");

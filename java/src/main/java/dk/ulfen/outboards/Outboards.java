@@ -22,6 +22,10 @@ public class Outboards implements ModInitializer {
 		// Using a motor on a boat clamps it on: the boat becomes a motorboat.
 		UseEntityCallback.EVENT.register((player, level, hand, entity, hit) -> {
 			if (!(player.getItemInHand(hand).getItem() instanceof MotorItem motor) || !(entity instanceof AbstractBoat boat)) return InteractionResult.PASS;
+			if (ModRegistry.motor(motor.motorId).inboard) {
+				player.sendOverlayMessage(Component.translatable("outboards.inboard_no_boat"));
+				return InteractionResult.FAIL;
+			}
 			if (boat instanceof AbstractChestBoat) {
 				player.sendOverlayMessage(Component.translatable("outboards.chest_boat"));
 				return InteractionResult.FAIL;

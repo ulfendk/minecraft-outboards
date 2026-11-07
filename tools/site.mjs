@@ -10,7 +10,7 @@ import { MOTOR_VARS } from './build.mjs';
 import { boatAnimation } from '../src/lib/anim.mjs';
 import { NS } from '../src/lib/constants.mjs';
 import { BOAT_MASS, topSpeed, vessel } from '../src/lib/water.mjs';
-import { MOTORS } from '../src/motors.mjs';
+import { MOTORS, OUTBOARDS } from '../src/motors.mjs';
 import { CONTROLS } from '../src/lang.mjs';
 import { LANGUAGES, STRINGS } from '../src/i18n.mjs';
 
@@ -44,10 +44,11 @@ const load = async (dir, id) => ({
 {
   const { geo, tex } = await load('entity', oak.id);
   const anim = Object.values(boatAnimation(oak, 'preview').animations)[0];
-  for (const [i, m] of MOTORS.entries()) {
+  for (const m of MOTORS) {
     const block = await load('blocks', `${m.id}_mounted`);
     await writeFile(join(OUT, 'img', 'motors', `${m.id}.png`), render(block.geo, block.tex, { yaw: 150, pitch: 15, size: 320 }));
-    await writeFile(join(OUT, 'img', 'motors', `${m.id}_boat.png`), render(geo, tex, { anim, vars: MOTOR_VARS(i, true), yaw: 140, pitch: 25, size: 320 }));
+    if (m.inboard) continue;
+    await writeFile(join(OUT, 'img', 'motors', `${m.id}_boat.png`), render(geo, tex, { anim, vars: MOTOR_VARS(OUTBOARDS.indexOf(m), true), yaw: 140, pitch: 25, size: 320 }));
   }
 }
 // The boats of every wood, for the boat section.
@@ -75,6 +76,14 @@ const kmh = (blocksPerTick) => Math.round(blocksPerTick * 72);
 
 /** The numbers shown on each motor's card. */
 function stats(m, t) {
+  if (m.inboard) {
+    return [
+      [t.stats.ship1000, `${kmh(topSpeed(vessel([m], 4 + 1000)))} ${t.stats.kmh}`],
+      [t.stats.ship4096, `${kmh(topSpeed(vessel([m], 4 + 4096)))} ${t.stats.kmh}`],
+      [t.stats.tank, `${Math.round(m.tank / m.burn / 1200)} ${t.stats.min}`],
+      [t.stats.fuel, t.fuelNames[m.kind]],
+    ];
+  }
   return [
     [t.stats.boat, `${kmh(topSpeed(vessel([m], BOAT_MASS)))} ${t.stats.kmh}`],
     [t.stats.raft16, `${kmh(topSpeed(vessel([m], 4 + 16)))} ${t.stats.kmh}`],
@@ -96,9 +105,9 @@ function page(lang) {
 
   const cards = MOTORS.map((m) => `
       <article class="card">
-        <div class="portrait"><img src="${up}img/motors/${m.id}.png" data-fly="${up}img/motors/${m.id}_boat.png" alt="${esc(nameOf(m.id, m.name))}" loading="lazy" width="320" height="320"></div>
+        <div class="portrait"><img src="${up}img/motors/${m.id}.png"${m.inboard ? '' : ` data-fly="${up}img/motors/${m.id}_boat.png"`} alt="${esc(nameOf(m.id, m.name))}" loading="lazy" width="320" height="320"></div>
         <div class="card-body">
-          <span class="group">${m.hp > 1 ? `${m.hp} ${lang === 'da' ? 'hk' : 'hp'}` : '⚡'}</span>
+          <span class="group">${m.hp > 1 ? `${m.hp.toLocaleString(L.dateLocale)} ${lang === 'da' ? 'hk' : 'hp'}` : '⚡'}</span>
           <h3>${esc(nameOf(m.id, m.name))}</h3>
           <p>${esc(t.info?.[m.id] ?? m.info)}</p>
           <dl class="stats">${stats(m, t).map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
@@ -329,7 +338,7 @@ ${t.features.map(([title, text]) => `      <div class="feature"><h3>${esc(title)
 </footer>
 <script>
 // Hover (or tap) a picture to see the motor on a boat
-document.querySelectorAll('.portrait img').forEach((img) => {
+document.querySelectorAll('.portrait img[data-fly]').forEach((img) => {
   const still = img.src, fly = img.dataset.fly;
   new Image().src = fly;
   const show = (on) => { img.src = on ? fly : still; };

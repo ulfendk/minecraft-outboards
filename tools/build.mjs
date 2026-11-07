@@ -15,7 +15,7 @@ import { Model } from '../src/lib/parts.mjs';
 import { paintTexture } from '../src/lib/texture.mjs';
 import { langEntries, LOCALES } from '../src/lang.mjs';
 import { buildItem, items as itemsFor, recipes as recipesFor } from '../src/items.mjs';
-import { MOTORS, motorRecord } from '../src/motors.mjs';
+import { MOTORS, motorRecord, OUTBOARDS } from '../src/motors.mjs';
 import { boatMaterials, boatModel, boatName, boatVisuals, SEATS, WOODS } from '../src/boats.mjs';
 import { bedrockBlock, blockArt, BLOCKS } from '../src/blocks.mjs';
 import { seatPositions } from '../src/lib/behavior.mjs';
@@ -121,12 +121,6 @@ export async function build({ quiet = false } = {}) {
     if (m.wood === 'oak') oak = { m, geo, texture };
   }
 
-  // Handbook portraits: each motor on an oak boat.
-  const anim = Object.values(boatAnimation(oak.m, 'preview').animations)[0];
-  for (const [i, motor] of MOTORS.entries()) {
-    await write(join(RP, 'textures', 'ui', NS, `${motor.id}.png`), render(oak.geo.geometry, oak.texture, { yaw: 120, pitch: 20, size: 64, anim, vars: MOTOR_VARS(i) }));
-  }
-
   // Blocks: mounted motors and the ship's wheel.
   const terrain = {};
   const blockArtById = {};
@@ -140,6 +134,14 @@ export async function build({ quiet = false } = {}) {
       pools: [{ rolls: 1, entries: [{ type: 'item', name: `${NS}:${block.loot}`, weight: 1 }] }],
     });
     terrain[`${NS}_${block.id}`] = { textures: `textures/blocks/${NS}/${block.id}` };
+  }
+  // Handbook portraits: each outboard on an oak boat, the inboard engine on its own.
+  const anim = Object.values(boatAnimation(oak.m, 'preview').animations)[0];
+  for (const motor of MOTORS) {
+    const portrait = motor.inboard
+      ? (({ geo, texture }) => render(geo.geometry, texture, { yaw: 150, pitch: 20, size: 64 }))(blockArtById[`${motor.id}_mounted`])
+      : render(oak.geo.geometry, oak.texture, { yaw: 120, pitch: 20, size: 64, anim, vars: MOTOR_VARS(OUTBOARDS.indexOf(motor)) });
+    await write(join(RP, 'textures', 'ui', NS, `${motor.id}.png`), portrait);
   }
   await write(join(RP, 'textures', 'terrain_texture.json'), { resource_pack_name: NS, texture_name: 'atlas.terrain', padding: 8, num_mip_levels: 4, texture_data: terrain });
   await write(join(RP, 'blocks.json'), {

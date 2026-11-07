@@ -16,7 +16,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.WrittenBookContent;
 import net.minecraft.world.level.Level;
 
-/** The Outboard Handbook: boats, rafts, fuel and a page per motor, in the reader's language. */
+/** The Outboard Handbook: boats, rafts, ships, fuel and a page per motor, in the reader's language. */
 public class HandbookItem extends Item {
 	private static final String GIVEN = "outboards.handbook_given";
 
@@ -37,11 +37,12 @@ public class HandbookItem extends Item {
 			pages.add(page(Component.translatable("outboards.handbook." + p), Component.translatable("outboards.handbook." + p + "_text")));
 			pages.add(page(Component.translatable("outboards.handbook." + p), Component.translatable("outboards.controls.java." + p)));
 		}
+		pages.add(page(Component.translatable("outboards.handbook.ship"), Component.translatable("outboards.handbook.ship_text")));
 		pages.add(page(Component.translatable("outboards.handbook.fuel"), Component.translatable("outboards.handbook.fuel_text")));
 		for (MotorSpec m : ModRegistry.MOTORS) {
-			long top = Math.round(Water.topSpeed(Water.vessel(List.of(m), Water.BOAT_MASS)) * 72);
+			long top = Math.round(Water.topSpeed(Water.vessel(List.of(m), m.inboard ? 4 + 2000 : Water.BOAT_MASS)) * 72);
 			pages.add(page(Component.translatable("item.outboards." + m.id), Component.translatable("outboards.info." + m.id),
-				Component.translatable("outboards.handbook.speed", top)));
+				Component.translatable(m.inboard ? "outboards.handbook.ship_speed" : "outboards.handbook.speed", top)));
 		}
 		return new WrittenBookContent(Filterable.passThrough("Outboard Handbook"), "Outboards", 0, pages, true);
 	}

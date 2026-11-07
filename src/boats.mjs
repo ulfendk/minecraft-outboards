@@ -4,7 +4,7 @@
 // which only the fitted one is shown.
 import { Model } from './lib/parts.mjs';
 import { mottle, fur, shade } from './lib/texture.mjs';
-import { addMotor, motorMaterials, MOTORS } from './motors.mjs';
+import { addMotor, motorMaterials, OUTBOARDS } from './motors.mjs';
 
 /** variant: the vanilla Bedrock boat's minecraft:variant. item: the Java/Bedrock boat item. */
 export const WOODS = [
@@ -54,7 +54,7 @@ export function boatModel(wood) {
   hull(m, wood.raft);
   const transomTop = wood.raft ? 5 : HULL.depth;
   const props = {};
-  for (const motor of MOTORS) {
+  for (const motor of OUTBOARDS) {
     // The leg reaches down through the water; the clamp sits on the transom.
     const len = motor.look.shaft[1];
     props[motor.id] = addMotor(m, 'root', motor, { z0: STERN + 1, dir: 1, y0: transomTop + 3 - len });
@@ -81,12 +81,12 @@ export const boatMaterials = (wood) => ({ ...motorMaterials(), planks: planks(wo
 /** A visual per motor: shown (scale 1) only when it is the one fitted, its propeller spinning. */
 export function boatVisuals(props) {
   const out = [];
-  MOTORS.forEach((motor, i) => {
+  OUTBOARDS.forEach((motor, i) => {
     out.push({ bone: motor.id, prop: 'scale', axis: -1, expr: `1 - math.min(1, math.abs($motor - ${i + 1}))` });
     out.push({ bone: props[motor.id], prop: 'rotation', axis: 2, expr: '$spin' });
   });
   // The motor turns with the rudder.
-  for (const motor of MOTORS) out.push({ bone: motor.id, prop: 'rotation', axis: 1, expr: '$steer' });
+  for (const motor of OUTBOARDS) out.push({ bone: motor.id, prop: 'rotation', axis: 1, expr: '$steer' });
   return out;
 }
 

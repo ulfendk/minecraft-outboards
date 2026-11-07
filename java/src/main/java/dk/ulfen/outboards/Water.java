@@ -21,6 +21,7 @@ public final class Water {
 	public static final double SPOOL = 0.04;
 	public static final double REVERSE = 0.5;
 	public static final int MAX_RAFT = 256;
+	public static final int MAX_SHIP = 4096;
 
 	private Water() {}
 
@@ -151,6 +152,15 @@ public final class Water {
 		if (wet == 0) return new Scan(false, "not_afloat", List.of());
 		if (wet < bottoms.size() / 2.0) return new Scan(false, "grounded", List.of());
 		return new Scan(true, null, cells);
+	}
+
+	/** The raft or ship a block belongs to (see scanVessel in water.mjs). */
+	public static Scan scanVessel(Getter get, Cell start, java.util.function.Predicate<String> isInboard) {
+		Scan r = scanRaft(get, start, MAX_SHIP);
+		if (r.ok() && r.cells().size() > MAX_RAFT && r.cells().stream().noneMatch(c -> isInboard.test(get.get(c.x(), c.y(), c.z())))) {
+			return new Scan(false, "too_big", List.of());
+		}
+		return r;
 	}
 
 	/** The water level a raft floats at: the highest water block next to or under it. */

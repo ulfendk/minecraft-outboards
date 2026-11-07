@@ -9,7 +9,7 @@ export const LANGUAGES = {
 const en = {
   allMods: 'All our mods',
   title: 'Outboards – Minecraft add-on and mod',
-  description: 'Outboard motors for Minecraft Bedrock and Java Edition: clamp one onto a boat, or onto a raft you build out of blocks, fill it up and set off. Four motors from a quiet electric to a 90 hp racer. Free download.',
+  description: 'Outboard motors for Minecraft Bedrock and Java Edition: clamp one onto a boat, or onto a raft you build out of blocks, fill it up and set off. Four outboards from a quiet electric to a 90 hp racer, and a 20,000 hp inboard engine for ships of thousands of blocks. Free download.',
   tagline: 'Outboard motors for Minecraft Bedrock and Java Edition. Clamp one onto a boat – or build a raft out of any blocks, put a motor or three on it, and take your house boat, your floating farm or your pirate ship out to sea.',
   download: 'iPad, phone, console & Windows: Bedrock',
   downloadJava: 'Mac & PC: Java Edition',
@@ -42,9 +42,9 @@ const en = {
   released: 'released',
   install: 'Install',
   motorsTitle: 'The motors',
-  motorsLede: 'Four outboards, from a silent electric trolling motor to a 90 hp V4. Hover or tap a picture to see it on a boat.',
-  stats: { boat: 'On a boat', raft16: 'Raft of 16 blocks', raft64: 'Raft of 64', kmh: 'km/h', tank: 'Full tank', min: 'min', fuel: 'Runs on' },
-  fuelNames: { combustion: 'coal, charcoal, blaze rods', electric: 'redstone' },
+  motorsLede: 'Four outboards, from a silent electric trolling motor to a 90 hp V4, and a 20,000 hp inboard engine for real ships. Hover or tap an outboard to see it on a boat.',
+  stats: { boat: 'On a boat', raft16: 'Raft of 16 blocks', raft64: 'Raft of 64', ship1000: 'Ship of 1,000 blocks', ship4096: 'Ship of 4,096', kmh: 'km/h', tank: 'Full tank', min: 'min', fuel: 'Runs on' },
+  fuelNames: { combustion: 'coal, charcoal, blaze rods', electric: 'redstone', inboard: 'coal blocks, lava, blaze rods' },
   boatTitle: 'On a boat',
   boatSteps: [
     '<strong>Put a boat in the water</strong> – any wood, or a bamboo raft (not one with a chest).',
@@ -70,6 +70,7 @@ const en = {
   features: [
     ['Fuel', 'A full tank is 12 units. Coal and charcoal give 3, a blaze rod 6; the electric motor takes redstone (1) or a block of redstone (9). Bigger motors burn faster.'],
     ['Big rafts, slow rafts', 'The heavier the raft, the slower it goes and turns. Several motors add up: put two or three on the stern of a big raft.'],
+    ['Ships', 'Put an inboard engine inside the hull and the limit goes from 256 blocks to 4,096: a cargo ship, a battleship, a floating town. One engine pushes a ship of a thousand blocks at full speed; fit two or more for the really big ones.'],
     ['Everything comes along', 'Chests keep what is in them, and players and animals standing on the deck travel with the raft.'],
     ['Bump', 'A raft stops when it hits the shore, a pier or another raft. Back off with S and steer round it.'],
     ['Silent running', 'The electric trolling motor makes no noise: the one to take fishing, or hunting along the shore.'],
@@ -83,7 +84,7 @@ const en = {
 const da = {
   allMods: 'Alle vores mods',
   title: 'Påhængsmotorer – Outboards til Minecraft',
-  description: 'Påhængsmotorer til Minecraft Bedrock og Java Edition: Sæt en på en båd, eller på en flåde, du bygger af blokke, fyld den op og sejl af sted. Fire motorer, fra en stille elmotor til en 90 hk racer. Gratis download.',
+  description: 'Påhængsmotorer til Minecraft Bedrock og Java Edition: Sæt en på en båd, eller på en flåde, du bygger af blokke, fyld den op og sejl af sted. Fire påhængsmotorer, fra en stille elmotor til en 90 hk racer, og en 20.000 hk indenbordsmotor til skibe på tusindvis af blokke. Gratis download.',
   tagline: 'Påhængsmotorer til Minecraft Bedrock og Java Edition. Sæt en på en båd – eller byg en flåde af hvilke som helst blokke, sæt en motor eller tre på, og sejl din husbåd, din flydende gård eller dit piratskib ud på havet.',
   download: 'iPad, telefon, konsol & Windows: Bedrock',
   downloadJava: 'Mac & pc: Java Edition',
@@ -116,9 +117,9 @@ const da = {
   released: 'udgivet',
   install: 'Installér',
   motorsTitle: 'Motorerne',
-  motorsLede: 'Fire påhængsmotorer, fra en lydløs elmotor til en 90 hk V4. Hold musen over eller tryk på et billede for at se den på en båd.',
-  stats: { boat: 'På en båd', raft16: 'Flåde på 16 blokke', raft64: 'Flåde på 64', kmh: 'km/t', tank: 'Fuld tank', min: 'min', fuel: 'Kører på' },
-  fuelNames: { combustion: 'kul, trækul, blazestave', electric: 'redstone' },
+  motorsLede: 'Fire påhængsmotorer, fra en lydløs elmotor til en 90 hk V4, og en 20.000 hk indenbordsmotor til rigtige skibe. Hold musen over eller tryk på en påhængsmotor for at se den på en båd.',
+  stats: { boat: 'På en båd', raft16: 'Flåde på 16 blokke', raft64: 'Flåde på 64', ship1000: 'Skib på 1.000 blokke', ship4096: 'Skib på 4.096', kmh: 'km/t', tank: 'Fuld tank', min: 'min', fuel: 'Kører på' },
+  fuelNames: { combustion: 'kul, trækul, blazestave', electric: 'redstone', inboard: 'kulblokke, lava, blazestave' },
   boatTitle: 'På en båd',
   boatSteps: [
     '<strong>Sæt en båd i vandet</strong> – af hvilket som helst træ, eller en bambusflåde (ikke en med kiste).',
@@ -144,6 +145,7 @@ const da = {
   features: [
     ['Brændstof', 'En fuld tank er 12 enheder. Kul og trækul giver 3, en blazestav 6; elmotoren tager redstone (1) eller en redstoneblok (9). Større motorer bruger mere.'],
     ['Store flåder er langsomme', 'Jo tungere flåden er, jo langsommere sejler og drejer den. Flere motorer lægges sammen: Sæt to eller tre på agterenden af en stor flåde.'],
+    ['Skibe', 'Sæt en indenbordsmotor inde i skroget, så går grænsen fra 256 blokke til 4.096: et fragtskib, et slagskib, en flydende by. Én motor skubber et skib på tusind blokke i fuld fart; sæt to eller flere i de helt store.'],
     ['Alt kommer med', 'Kister beholder, hvad der er i dem, og spillere og dyr, der står på dækket, sejler med flåden.'],
     ['Bump', 'En flåde stopper, når den rammer kysten, en mole eller en anden flåde. Bak med S, og styr uden om.'],
     ['Lydløs', 'Elmotoren larmer ikke: den, du tager med på fisketur, eller på jagt langs kysten.'],
@@ -157,6 +159,7 @@ const da = {
     medium_motor: 'Påhængsmotor (15 hk)',
     large_motor: 'Påhængsmotor (90 hk)',
     electric_motor: 'Elektrisk påhængsmotor',
+    inboard_engine: 'Indenbordsmotor (20.000 hk)',
     helm: 'Skibsrat',
     outboard_handbook: 'Håndbog for påhængsmotorer',
     motorboat_oak: 'Motorbåd af eg',
@@ -175,6 +178,7 @@ const da = {
     medium_motor: 'En rigtig firetakter. Den får en båd til at plane hen over vandet, og den skubber en flåde på et par dusin blokke af sted i god fart.',
     large_motor: 'En stor V4 til speedbåde og store flåder. Meget hurtig på en båd, og den, du skal sætte på en flåde på hundrede blokke eller mere. Tørstig: Tag blazestave med.',
     electric_motor: 'En stille elmotor på et langt skaft, der lades op med redstone. Langsom, men lydløs: Fisk og dyr på kysten hører dig ikke komme.',
+    inboard_engine: 'En skibsdiesel på størrelse med en blok. Sæt den inde i skroget, vendt den vej, skibet skal sejle: Den skubber skibe på op til 4.096 blokke. Den brænder kulblokke, lava og blazestave, og en fuld tank holder tre minutter ved fuld gas. For stor til en båd.',
   },
 };
 

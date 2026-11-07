@@ -1,9 +1,11 @@
-import { GameMode, world } from '@minecraft/server';
+import { GameMode, ItemStack, world } from '@minecraft/server';
 import { BOATS, MOTORS } from './data.js';
 
 export const NS = 'outboards';
 export const LOG = '[Outboards]';
 export const MOTOR_BY_ID = Object.fromEntries(MOTORS.map((m) => [m.id, m]));
+/** The motors that fit a boat, numbered 1..4 on the motorboat. */
+export const OUTBOARDS = MOTORS.filter((m) => !m.inboard);
 export const BOAT_BY_TYPE = Object.fromEntries(BOATS.map((b) => [`${NS}:${b.id}`, b]));
 export const boatOf = (entity) => BOAT_BY_TYPE[entity?.typeId];
 /** The motor a mounted-motor block holds ('outboards:small_motor_mounted' -> small motor). */
@@ -98,6 +100,9 @@ export const isCreative = (player) => {
   }
 };
 
+/** Items that leave something behind when used up (a lava bucket leaves the bucket). */
+const REMAINS = { 'minecraft:lava_bucket': 'minecraft:bucket' };
+
 /** Uses up one of the item in the player's hand (not in creative). */
 export function consume(player) {
   try {
@@ -106,11 +111,17 @@ export function consume(player) {
     const slot = player.selectedSlotIndex;
     const item = inv.getItem(slot);
     if (!item) return;
+    const remains = REMAINS[item.typeId];
     if (item.amount > 1) {
       item.amount -= 1;
       inv.setItem(slot, item);
     } else {
-      inv.setItem(slot);
+      inv.setItem(slot, remains ? new ItemStack(remains, 1) : undefined);
+      return;
+    }
+    if (remains) {
+      const left = inv.addItem(new ItemStack(remains, 1));
+      if (left) player.dimension.spawnItem(left, player.location);
     }
   } catch {}
 }

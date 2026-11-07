@@ -24,8 +24,9 @@ export function refuel(player, motor, fuel) {
     return undefined;
   }
   const next = Math.min(motor.tank, fuel + units);
+  const lava = item.typeId === 'minecraft:lava_bucket';
   consume(player);
-  sound(player.dimension, motor.kind === 'electric' ? 'random.orb' : 'bucket.fill', player.location, 0.7, motor.kind === 'electric' ? 1.6 : 0.8);
+  sound(player.dimension, motor.kind === 'electric' ? 'random.orb' : lava ? 'bucket.empty_lava' : 'bucket.fill', player.location, 0.7, motor.kind === 'electric' ? 1.6 : 0.8);
   tell(player, `${NS}.refuel`, [percent(next, motor.tank)]);
   return next;
 }

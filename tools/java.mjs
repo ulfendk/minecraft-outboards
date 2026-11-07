@@ -8,7 +8,7 @@ import { dirname, join } from 'node:path';
 import { NS } from '../src/lib/constants.mjs';
 import { BOAT_MASS, initial, scanRaft, step, vessel } from '../src/lib/water.mjs';
 import { javaId } from '../src/ids.mjs';
-import { MOTORS, motorRecord } from '../src/motors.mjs';
+import { MOTORS, motorById, motorRecord } from '../src/motors.mjs';
 import { FACINGS, javaBlockModel } from '../src/blocks.mjs';
 import { seatPositions } from '../src/lib/behavior.mjs';
 
@@ -27,6 +27,7 @@ export function waterFixtures() {
     ...MOTORS.map((m) => ({ id: `boat ${m.id}`, motors: [m], mass: BOAT_MASS })),
     { id: 'raft 40 two large', motors: [MOTORS[2], MOTORS[2]], mass: 44 },
     { id: 'raft 120 medium', motors: [MOTORS[1]], mass: 124 },
+    { id: 'ship 3000 two inboard', motors: [motorById('inboard_engine'), motorById('inboard_engine')], mass: 3004 },
   ];
   for (const c of cases) {
     const v = vessel(c.motors, c.mass);
